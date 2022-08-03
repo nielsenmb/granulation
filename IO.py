@@ -1,4 +1,5 @@
-import lightkurve as lk
+#import lightkurve as lk
+import lightkurveCacheAccess as lka
 from lightkurve.periodogram import Periodogram
 import jax.numpy as jnp
 import numpy as np
@@ -82,6 +83,7 @@ class psd():
                  downloadDir='./',fit_mean=False, timeConversion=86400):
 
         self.ID = ID
+
         self.downloadDir= downloadDir
 
         if (time is None) and (flux is None):
@@ -89,22 +91,28 @@ class psd():
             time, flux = self._getTS(numaxGuess)
 
             flux = (flux/np.nanmedian(flux) - 1) * 1e6
-                
-        self.time = time
+        
+        self._time = time
+        
+        self._flux = flux
 
-        self.flux = flux
+        self._getBadIndex(time, flux)
 
-        self.flux_err = flux_err
-
+        self.pbins, self.tbins = self.determineBins(time[self.indx], numaxGuess)
+ 
+        if self.tbins > 1:  
+            print(f'Binning time series by {self.tbins}')
+            self.time, self.flux = self.binning(time[self.indx], flux[self.indx], self.tbins)
+        else:
+            self.time, self.flux = time[self.indx], flux[self.indx]
+ 
         self.fit_mean = fit_mean
 
         self.timeConversion = timeConversion
 
-        self._getBadIndex()
- 
         self.dt = self._getSampling()
 
-        self.dT = self.time[-1] - self.time[0]
+        self.dT = self.time.max() - self.time.min()
 
         self.NT = len(self.time)
 
@@ -112,22 +120,87 @@ class psd():
 
         if flux_err is None:
             # Init Astropy LS class without weights
-            self.ls = LombScargle(self.time[self.indx] * self.timeConversion,
-                                  self.flux[self.indx], center_data=True,
+            self.ls = LombScargle(self.time * self.timeConversion,
+                                  self.flux, center_data=True,
                                   fit_mean=self.fit_mean)
 
         else:
             # Init Astropy LS class with weights
-            self.ls = LombScargle(self.time[self.indx] * self.timeConversion,
-                                  self.flux[self.indx], center_data=True,
+            self.ls = LombScargle(self.time * self.timeConversion,
+                                  self.flux, center_data=True,
                                   fit_mean=self.fit_mean,
-                                  dy=self.flux_err[self.indx],)
+                                  dy=self.flux_err,)
 
         self.Nyquist = 1/(2*self.timeConversion*self.dt) # Hz
 
         self.df = self._fundamental_spacing_integral()
- 
-    def _getTS(self, numaxGuess, exptime=None):
+
+    def determineBins(self, t, numax_guess, tgtLen=1e5, nW=2, tBinMax=3, pBinMax=10):
+
+        df = 1/((t[-1] - t[0])*24*60*60)*1e6
+
+        nyq = 1/(2*np.median(np.diff(t*24*60*60)))*1e6
+
+        if (numax_guess is None) or nyq < 1000:
+            nT = 1
+        else:
+            nT = min([max([nyq//(numax_guess[0] + nW*self.envWidth(numax_guess[0])), 1]), tBinMax])
+
+        nP = 1
+
+        while (nyq//nT-df*nP)//(df*nP) > tgtLen:
+            nP += 1
+
+        if nP > pBinMax:
+            nP = pBinMax
+
+        return int(nP), int(nT)
+
+    def binning(self, _t, _d, n):
+
+        N = len(_t)
+
+        t, d = np.array([]), np.array([])
+
+        Nc = 200000
+
+        for i in range(N//Nc+1):
+
+            _x , _y = self._binTS(_t[i*Nc: (i+1)*Nc], _d[i*Nc: (i+1)*Nc], n)
+
+            t = np.append(t, _x)
+
+            d = np.append(d, _y)
+
+        return t, d
+
+    def _binTS(self, t, d, n):
+
+        dt = np.median(np.diff(t))
+
+        T = np.array([])
+
+        D = np.array([])
+
+        i = 0
+
+        while i < len(t)-n+1:
+
+            dT = t[i+n-1]-t[i]
+
+            if dT < (n+1)*dt:
+                T = np.append(T, t[i+n-1]-dT/2)
+
+                D = np.append(D, np.mean(d[i:i+n]))
+
+                i += n
+
+            else:
+                i +=1
+
+        return T, D
+
+    def _getTS(self, numaxGuess):
         """Get time series with lightkurve
 
         Parameters
@@ -143,40 +216,33 @@ class psd():
             The flux values of the time series.
         """
 
+        lk_kwargs = {}
+
         if 'KIC' in self.ID:
-            author = 'Kepler'
+            lk_kwargs['author'] = 'Kepler'
+            lk_kwargs['mission'] = 'Kepler'
 
-            mission = 'Kepler'
-
-            if exptime is None:
-                if numaxGuess[0] > 1/(2*1800)*1e6:
-                    exptime = 60
-                else:
-                    exptime = 1800
+            if numaxGuess[0] > 1/(2*1800)*1e6:
+                lk_kwargs['exptime'] = 60
+            else:
+                lk_kwargs['exptime'] = 1800
 
         if 'TIC' in self.ID:
-            author = 'SPOC'
+            lk_kwargs['author'] = 'SPOC'
+            lk_kwargs['mission'] = 'TESS'
+            lk_kwargs['exptime'] = 120
 
-            mission = 'TESS'
-            
-            if exptime is None:
-                exptime = 120
-
-        # Set window length in terms of bins depending on cadence
-        wlen = int(1.5e6/exptime)-1
-
-        # Window length must be odd
+        wlen = int(1.5e6/lk_kwargs['exptime'])-1
         if wlen % 2 == 0:
             wlen += 1
          
-        LCcol = lk.search_lightcurve(self.ID, author=author, mission=mission, exptime=exptime).download_all(download_dir=self.downloadDir)
+        LCcol = lka.search_lightcurve(self.ID, self.downloadDir, lk_kwargs, use_cached=True, cache_expire=10*365) #.download_all(download_dir=self.downloadDir)
  
         lc = LCcol.stitch().normalize().remove_nans().remove_outliers().flatten(window_length=wlen)
 
         t, d = jnp.array(lc.time.value), jnp.array(lc.flux.value)
  
         return t, d
-
 
     def __call__(self, oversampling=1, nyquist_factor=1.0, method='fast'):
         """ Compute power spectrum
@@ -224,13 +290,56 @@ class psd():
  
         self.amplitude = jnp.array(power * np.sqrt(power * self.normfactor * 2))
 
+        if self.pbins > 1:
+            print(f'Binning PSD by {self.pbins}')
+            self.freq = self.binPSD(self.freq)
+            self.power = self.binPSD(self.power)
+            self.powerdensity = self.binPSD(self.powerdensity)
+            self.amplitude = self.binPSD(self.amplitude)
+
         pg = Periodogram(self.freq * units.uHz, units.Quantity(self.powerdensity))
 
         pg = pg.flatten()
          
         self.snr = pg.power.value
 
-    def _getBadIndex(self):
+
+    def binPSD(self, inp):
+        """ Bin x by a factor n
+
+        If len(x) is not equal to an integer number of n, the remaining
+        frequency bins are discarded. Half at low frequency and half at high
+        frequency.
+
+        Parameters
+        ----------
+        inp : array
+            Array of values to bin.
+
+        Returns
+        -------
+        xbin : array
+            The binned version of the input array
+        """
+
+        x = inp.copy()
+
+        # Number of frequency bins per requested bin width
+        n = self.pbins
+
+        # The input array isn't always an integer number of the binning factor
+        # A bit of the input array is therefore trimmed a low and high end.
+        trim = (len(x)//n)*n
+
+        half_rest = (len(x)-trim)//2
+
+        x = x[half_rest:half_rest+trim] # Trim the input array
+
+        xbin = x.reshape((-1, n)).mean(axis = 1) # reshape and average
+
+        return xbin
+
+    def _getBadIndex(self, time, flux):
         """ Identify indices with nan/inf values
 
         Flags array indices where either the timestamps, flux values, or flux errors
@@ -238,15 +347,13 @@ class psd():
 
         """
 
-        if self.flux_err is not None:
-            self.indx = np.invert(np.isnan(self.time) | np.isnan(self.flux) | np.isnan(self.flux_err) | np.isinf(self.time) | np.isinf(self.flux) | np.isinf(self.flux_err))
-        else:
-            self.indx = np.invert(np.isnan(self.time) | np.isnan(self.flux) | np.isinf(self.time) | np.isinf(self.flux))
+        self.indx = np.invert(np.isnan(time) | np.isnan(flux) | np.isinf(time) | np.isinf(flux))
 
     def getTSWindowFunction(self, tmin=None, tmax=None, cadenceMargin=1.01):
 
         if tmin is None:
             tmin = min(self.time)
+
         if tmax is None:
             tmax = max(self.time)
 
@@ -368,7 +475,7 @@ class psd():
         """
 
         # The nominal frequency resolution
-        df = 1/(self.timeConversion*(np.nanmax(self.time[self.indx]) - np.nanmin(self.time[self.indx]))) # Hz
+        df = 1/(self.timeConversion*(np.nanmax(self.time) - np.nanmin(self.time))) # Hz
 
         # Compute the window function
         freq, window = self.windowfunction(df, width=100*df, oversampling=5) # oversampling for integral accuracy

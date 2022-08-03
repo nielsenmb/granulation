@@ -233,7 +233,7 @@ def check_sr_cache(ID, lkwargs, use_cached=True, download_dir=None,
         else:
             print('Using cached search result.')    
     else:
-        print('No cached data, searching MAST')
+        print('No cached search results, searching MAST')
         resultDict = search_and_dump(ID, lkwargs, cachepath)
         
     return resultDict['result']

@@ -5,7 +5,8 @@ from dynesty import utils as dyfunc
 import distributions as dist
 import numpy as np
 import lightkurve as lk
-import lightkurveCacheAccess as lka
+from IO import psd
+
 jax.config.update('jax_enable_x64', True)
 
 class scalingRelations():
@@ -95,152 +96,153 @@ class granulation_fit(scalingRelations):
  
     def __init__(self, ID, numax, download_dir):
 
-
         self.ID = ID
 
         self.numax_guess = numax
 
         self.download_dir = download_dir
 
-        f, p = self.getPSD()
+        self.psd = psd(self.ID, numaxGuess=self.numax_guess, downloadDir=download_dir)
 
-        self.f = jnp.array(f)
+        self.psd()
+        
+        self.f, self.p = self.psd.freq[self.psd.freq > 1], self.psd.powerdensity[self.psd.freq > 1]
+        
+        self.t, self.d = self.psd.time, self.psd.flux
 
-        self.p = jnp.array(p)
-
-        self.nyq = self.f.max()
+        self.Nyquist = self.psd.Nyquist * 1e6
 
         self.ndim = 13
 
-        self.eta = jnp.sinc(self.f / 2.0 / self.nyq)**2.0
+        self.eta = jnp.sinc(self.f / 2.0 / self.Nyquist)**2.0
 
         self.addPriors()
 
         self.wfac = 1/ (2 * jnp.sqrt(2 * jnp.log(2))) / 2
 
-        if self.pbins > 1:
+        if self.psd.pbins > 1:
             self._lnlike = self._lnlike_binned
         else:
             self._lnlike = self._lnlike_std
 
-    def getPSD(self,):
+    # def getPSD(self,):
 
+    #     lk_kwargs = {}
 
-        lk_kwargs = {}
-        if 'KIC' in self.ID:
-            lk_kwargs['author'] = 'Kepler'
-            lk_kwargs['mission'] = 'Kepler'
+    #     if 'KIC' in self.ID:
+    #         lk_kwargs['author'] = 'Kepler'
+    #         lk_kwargs['mission'] = 'Kepler'
 
-            if self.numax_guess[0] > 1/(2*1800)*1e6:
-                lk_kwargs['exptime'] = 60
-            else:
-                lk_kwargs['exptime'] = 1800
+    #         if self.numax_guess[0] > 1/(2*1800)*1e6:
+    #             lk_kwargs['exptime'] = 60
+    #         else:
+    #             lk_kwargs['exptime'] = 1800
 
-        if 'TIC' in self.ID:
-            lk_kwargs['author'] = 'SPOC'
-            lk_kwargs['mission'] = 'TESS'
-            lk_kwargs['exptime'] = 120
+    #     if 'TIC' in self.ID:
+    #         lk_kwargs['author'] = 'SPOC'
+    #         lk_kwargs['mission'] = 'TESS'
+    #         lk_kwargs['exptime'] = 120
 
-        wlen = int(1.5e6/lk_kwargs['exptime'])-1
-        if wlen % 2 == 0:
-            wlen += 1
+    #     wlen = int(1.5e6/lk_kwargs['exptime'])-1
+    #     if wlen % 2 == 0:
+    #         wlen += 1
 
-         
-        #LCcol = lkA.search_lightcurve(self.ID, author=author, mission=mission, exptime=exptime).download_all(download_dir=self.download_dir)
-        LCcol = lka.search_lightcurve(self.ID, self.download_dir, lk_kwargs, use_cached=True, cache_expire=1)
+    #     #LCcol = lkA.search_lightcurve(self.ID, author=author, mission=mission, exptime=exptime).download_all(download_dir=self.download_dir)
+    #     LCcol = lka.search_lightcurve(self.ID, self.download_dir, lk_kwargs, use_cached=True, cache_expire=1)
         
-        lc = LCcol.stitch().normalize().remove_nans().remove_outliers().flatten(window_length=wlen) 
+    #     lc = LCcol.stitch().normalize().remove_nans().remove_outliers().flatten(window_length=wlen) 
 
-        self.pbins, self.tbins = self.determineBins(lc.time.value)
+    #     self.pbins, self.tbins = self.determineBins(lc.time.value)
 
-        if self.tbins > 1: #((exptime == 60) or (exptime == 120)) and (self.numax_guess[0] < 1/(2*exptime)*1e6/self.tbins):
-            print(f'Binning time series by {self.tbins}')
+    #     if self.tbins > 1:  
+    #         print(f'Binning time series by {self.tbins}')
+    #         self.t, self.d_ = binning(lc.time.value, lc.flux.value, self.tbins)
 
-            self.t, self.d = binning(lc.time.value, lc.flux.value, self.tbins)
+    #     else:
+    #         self.t, self.d_ = lc.time.value, lc.flux.value
 
-            lc = lk.LightCurve(time=self.t, flux=self.d, targetid=self.ID)
+    #     self.d = (self.d_ / np.nanmedian(self.d_) - 1) * 1e6
 
-        else:
-            self.t, self.d = lc.time.value, lc.flux.value
+    #     lc = lk.LightCurve(time=self.t, flux=self.d, targetid=self.ID)
 
-        pg = lc.to_periodogram(normalization='psd', minimum_frequency=1.0)
+    #     pg = lc.to_periodogram(normalization='psd', minimum_frequency=1.0)
 
-        f, p = pg.frequency.value, pg.power.value
+    #     f, p = pg.frequency.value, pg.power.value
 
-        tot_MS = np.nansum((self.d - np.nanmean(self.d))**2)/len(self.t)
+    #     tot_MS = np.nansum((self.d - np.nanmean(self.d))**2)/len(self.t)
 
-        normfactor = tot_MS/np.sum(p)
+    #     normfactor = tot_MS/np.sum(p)
 
-        p *= normfactor
+    #     p *= normfactor
 
-        if self.pbins > 1:
-            print(f'Binning PSD by {self.pbins}')
-            f = self.binPSD(f)
+    #     if self.pbins > 1:
+    #         print(f'Binning PSD by {self.pbins}')
+    #         f = self.binPSD(f)
 
-            p = self.binPSD(p)
+    #         p = self.binPSD(p)
 
-        return f, p
+    #     return jnp.array(f), jnp.array(p)
 
-    def binPSD(self, inp):
-        """ Bin x by a factor n
+    # def binPSD(self, inp):
+    #     """ Bin x by a factor n
 
-        If len(x) is not equal to an integer number of n, the remaining
-        frequency bins are discarded. Half at low frequency and half at high
-        frequency.
+    #     If len(x) is not equal to an integer number of n, the remaining
+    #     frequency bins are discarded. Half at low frequency and half at high
+    #     frequency.
 
-        Parameters
-        ----------
-        inp : array
-            Array of values to bin.
+    #     Parameters
+    #     ----------
+    #     inp : array
+    #         Array of values to bin.
 
-        Returns
-        -------
-        xbin : array
-            The binned version of the input array
-        """
+    #     Returns
+    #     -------
+    #     xbin : array
+    #         The binned version of the input array
+    #     """
 
-        x = inp.copy()
+    #     x = inp.copy()
 
-        # Number of frequency bins per requested bin width
-        n = self.pbins
+    #     # Number of frequency bins per requested bin width
+    #     n = self.pbins
 
-        # The input array isn't always an integer number of the binning factor
-        # A bit of the input array is therefore trimmed a low and high end.
-        trim = (len(x)//n)*n
+    #     # The input array isn't always an integer number of the binning factor
+    #     # A bit of the input array is therefore trimmed a low and high end.
+    #     trim = (len(x)//n)*n
 
-        half_rest = (len(x)-trim)//2
+    #     half_rest = (len(x)-trim)//2
 
-        x = x[half_rest:half_rest+trim] # Trim the input array
+    #     x = x[half_rest:half_rest+trim] # Trim the input array
 
-        xbin = x.reshape((-1, n)).mean(axis = 1) # reshape and average
+    #     xbin = x.reshape((-1, n)).mean(axis = 1) # reshape and average
 
-        return xbin
+    #     return xbin
 
-    def determineBins(self, t, tgtLen=1e5, nW=2, tBinMax=3, pBinMax=10):
+    # def determineBins(self, t, tgtLen=1e5, nW=2, tBinMax=3, pBinMax=10):
 
-        df = 1/((t[-1] - t[0])*24*60*60)*1e6
+    #     df = 1/((t[-1] - t[0])*24*60*60)*1e6
 
-        nyq = 1/(2*np.median(np.diff(t*24*60*60)))*1e6
+    #     nyq = 1/(2*np.median(np.diff(t*24*60*60)))*1e6
 
-        nT = min([max([nyq//(self.numax_guess[0] + nW*self.envWidth(self.numax_guess[0])), 1]), tBinMax])
+    #     nT = min([max([nyq//(self.numax_guess[0] + nW*self.envWidth(self.numax_guess[0])), 1]), tBinMax])
 
-        if nyq < 1000:
-            nT = 1
+    #     if nyq < 1000:
+    #         nT = 1
 
-        nP = 1
+    #     nP = 1
 
-        while (nyq//nT-df*nP)//(df*nP) > tgtLen:
-            nP += 1
+    #     while (nyq//nT-df*nP)//(df*nP) > tgtLen:
+    #         nP += 1
 
-        if nP > pBinMax:
-            nP = pBinMax
+    #     if nP > pBinMax:
+    #         nP = pBinMax
 
-        return int(nP), int(nT)
+    #     return int(nP), int(nT)
 
     def addPriors(self):
         self.priors = []
 
-        widx = self.f > self.nyq - 100
+        widx = self.f > self.Nyquist - 100
         pw = self.p[widx].mean()
 
         # Harvey 1 (envelope harvey)
@@ -392,7 +394,7 @@ class granulation_fit(scalingRelations):
 
     @partial(jax.jit, static_argnums=(0,))
     def _lnlike_binned(self, mod):
-        L = jnp.sum((self.pbins-1)*(jnp.log(self.pbins) + jnp.log(self.p)) - self.lnfactorial(self.pbins-1) - self.pbins*(jnp.log(mod) + self.p/mod))
+        L = jnp.sum((self.psd.pbins-1)*(jnp.log(self.psd.pbins) + jnp.log(self.p)) - self.lnfactorial(self.psd.pbins-1) - self.psd.pbins*(jnp.log(mod) + self.p/mod))
         return L
 
     @partial(jax.jit, static_argnums=(0,))
@@ -419,7 +421,7 @@ class granulation_fit(scalingRelations):
 
         sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
 
-        sampler.run_nested(print_progress=False)
+        sampler.run_nested(print_progress=True)
 
         result = sampler.results
 
@@ -528,83 +530,83 @@ class granulation_fit(scalingRelations):
 
             fig.savefig(path, dpi=300)
 
-    def storeResults(self, i, updated_data, new_keys, samples, outputDir):
+    def storeResults(self, samples, outputDir):
 
-        hsig1, dhnu1, exp1, hsig2, dhnu2, exp2, hsig3, hnu3, exp3, numax, dwidth, height, white = samples.T
+        # hsig1, dhnu1, exp1, hsig2, dhnu2, exp2, hsig3, hnu3, exp3, numax, dwidth, height, white = samples.T
 
-        hnu1 = self.nuHarveyEnv(numax) * dhnu1
+        # hnu1 = self.nuHarveyEnv(numax) * dhnu1
 
-        hnu2 = self.nuHarveyGran(numax) * dhnu2
+        # hnu2 = self.nuHarveyGran(numax) * dhnu2
 
-        width = dwidth * self.envWidth(numax) / (2 * jnp.sqrt(2 * jnp.log(2)))
+        # width = dwidth * self.envWidth(numax) / (2 * jnp.sqrt(2 * jnp.log(2)))
 
-        percentiles= np.array([0.159, 0.5, 0.841])
+        # percentiles= np.array([0.159, 0.5, 0.841])
 
-        pars = [hsig1, np.log10(hnu1), np.log10(exp1),
-                hsig2, np.log10(hnu2), np.log10(exp2),
-                hsig3, np.log10(hnu3), np.log10(exp3),
-                np.log10(numax), np.log10(width), height,
-                white]
+        # pars = [hsig1, np.log10(hnu1), np.log10(exp1),
+        #         hsig2, np.log10(hnu2), np.log10(exp2),
+        #         hsig3, np.log10(hnu3), np.log10(exp3),
+        #         np.log10(numax), np.log10(width), height,
+        #         white]
 
-        for j, smp in enumerate(pars):
+        # for j, smp in enumerate(pars):
 
-            percs = np.percentile(smp, percentiles)
+        #     percs = np.percentile(smp, percentiles)
 
-            updated_data.at[i, new_keys[j]] = percs[1]
+        #     updated_data.at[i, new_keys[j]] = percs[1]
 
-            updated_data.at[i, new_keys[j]+'_err'] = np.mean(np.diff(percs))
+        #     updated_data.at[i, new_keys[j]+'_err'] = np.mean(np.diff(percs))
 
-        updated_data['completed'] = 1
+        # updated_data['completed'] = 1
 
-        if outputDir is not None:
+        # if outputDir is not None:
 
-            path = os.path.join(*[outputDir, os.path.basename(outputDir) + '_samples'])
+        path = os.path.join(*[outputDir, os.path.basename(outputDir) + '_samples'])
 
-            np.savez_compressed(path, samples=samples)
+        np.savez_compressed(path, samples=samples)
 
-def _binTS(t, d, n):
+# def _binTS(t, d, n):
 
-    dt = np.median(np.diff(t))
+#     dt = np.median(np.diff(t))
 
-    T = np.array([])
+#     T = np.array([])
 
-    D = np.array([])
+#     D = np.array([])
 
-    i = 0
+#     i = 0
 
-    while i < len(t)-n+1:
+#     while i < len(t)-n+1:
 
-        dT = t[i+n-1]-t[i]
+#         dT = t[i+n-1]-t[i]
 
-        if dT < (n+1)*dt:
-            T = np.append(T, t[i+n-1]-dT/2)
+#         if dT < (n+1)*dt:
+#             T = np.append(T, t[i+n-1]-dT/2)
 
-            D = np.append(D, np.mean(d[i:i+n]))
+#             D = np.append(D, np.mean(d[i:i+n]))
 
-            i += n
+#             i += n
 
-        else:
-            i +=1
+#         else:
+#             i +=1
 
-    return T, D
+#     return T, D
 
-def binning(_t, _d, n):
+# def binning(_t, _d, n):
 
-    N = len(_t)
+#     N = len(_t)
 
-    t, d = np.array([]), np.array([])
+#     t, d = np.array([]), np.array([])
 
-    Nc = 200000
+#     Nc = 200000
 
-    for i in range(N//Nc+1):
+#     for i in range(N//Nc+1):
 
-        _x , _y = _binTS(_t[i*Nc: (i+1)*Nc], _d[i*Nc: (i+1)*Nc], n)
+#         _x , _y = _binTS(_t[i*Nc: (i+1)*Nc], _d[i*Nc: (i+1)*Nc], n)
 
-        t = np.append(t, _x)
+#         t = np.append(t, _x)
 
-        d = np.append(d, _y)
+#         d = np.append(d, _y)
 
-    return t, d
+#     return t, d
 
 def gen_log_space(limit, n):
 
