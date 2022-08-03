@@ -1,6 +1,9 @@
 results/*
 scripts/*
 
+# exception to the rule
+!results/.gitkeep 
+!scripts/.gitkeep 
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
