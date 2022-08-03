@@ -145,11 +145,11 @@ class granulation_fit(scalingRelations):
         if wlen % 2 == 0:
             wlen += 1
 
-        print(lk_kwargs)
+         
         #LCcol = lkA.search_lightcurve(self.ID, author=author, mission=mission, exptime=exptime).download_all(download_dir=self.download_dir)
-        LCcol = lka.search_lightcurve(self.ID, self.download_dir, lk_kwargs, use_cached=True, cache_expire=10*365)
+        LCcol = lka.search_lightcurve(self.ID, self.download_dir, lk_kwargs, use_cached=True, cache_expire=1)
         
-        lc = LCcol.stitch().normalize().remove_nans().remove_outliers().flatten(window_length=wlen)*1e6
+        lc = LCcol.stitch().normalize().remove_nans().remove_outliers().flatten(window_length=wlen) 
 
         self.pbins, self.tbins = self.determineBins(lc.time.value)
 

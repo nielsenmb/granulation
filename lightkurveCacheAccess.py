@@ -125,7 +125,6 @@ def search_and_dump(ID, lkwargs, search_cache):
     current_date = datetime.now().isoformat()
     store_date = current_date[:current_date.index('T')].replace('-','')
 
-    print('Running new lightkurve search')
     search = lk.search_lightcurve(ID, exptime=lkwargs['exptime'], 
                                   mission=lkwargs['mission'])
     resultDict = {'result': search,
@@ -181,9 +180,9 @@ def getMASTidentifier(ID, lkwargs):
         ID = ID.replace(' ', '')
     return ID
 
-def perform_search(ID, lkwargs, use_cached=True, download_dir=None, 
+def check_sr_cache(ID, lkwargs, use_cached=True, download_dir=None, 
                    cache_expire=30):
-    """ Find filenames related to target
+    """ check search results cache
     
     Preferentially accesses cached search results, otherwise searches the 
     MAST archive.
@@ -229,14 +228,17 @@ def perform_search(ID, lkwargs, use_cached=True, download_dir=None,
         
         # If file is saved more than cache_expire days ago, a new search is performed
         if ddate.days > cache_expire:   
+            print(f'Last search was performed more than {cache_expire} days ago, checking for new data.')
             resultDict = search_and_dump(ID, lkwargs, cachepath)
-            
+        else:
+            print('Using cached search result.')    
     else:
+        print('No cached data, searching MAST')
         resultDict = search_and_dump(ID, lkwargs, cachepath)
         
     return resultDict['result']
 
-def check_lc_cache(search, mission, download_dir=None):
+def check_fits_cache(search, mission, download_dir=None):
     """ Query cache directory or download fits files.
     
     Searches the Lightkurve cache directory set by download_dir for fits files
@@ -272,9 +274,15 @@ def check_lc_cache(search, mission, download_dir=None):
         if os.path.exists(fname):
             files_in_cache.append(fname)
     
-    if len(files_in_cache) != len(search):       
+    if len(files_in_cache) != len(search):
+        if len(files_in_cache) == 0:
+            print('No files in cache, downloading.')
+        elif len(files_in_cache) > 0:
+            print('Search result did not match cached fits files, downloading.')       
         search.download_all(download_dir = download_dir)
         files_in_cache = [os.path.join(*[download_dir, 'mastDownload', mission, row['obs_id'], row['productFilename']]) for row in search.table]
+    else:
+        print('Loading fits files from cache.')
 
     return files_in_cache
 
@@ -331,9 +339,9 @@ def search_lightcurve(ID, download_dir, lkwargs, use_cached, cache_expire=30):
     
     ID = getMASTidentifier(ID, lkwargs)
 
-    search = perform_search(ID, lkwargs, use_cached, download_dir=download_dir, cache_expire=cache_expire)
+    search = check_sr_cache(ID, lkwargs, use_cached, download_dir=download_dir, cache_expire=cache_expire)
     
-    fitsFiles = check_lc_cache(search, lkwargs['mission'], download_dir=download_dir)
+    fitsFiles = check_fits_cache(search, lkwargs['mission'], download_dir=download_dir)
 
     lcCol = load_fits(fitsFiles, lkwargs['mission'])
     
