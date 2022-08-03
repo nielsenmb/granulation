@@ -299,7 +299,7 @@ def clean_lc(lc):
     lc = lc.remove_nans().flatten(window_length=4001).remove_outliers()
     return lc
 
-def query_lightkurve(ID, lkwargs, use_cached, download_dir, cache_expire=30):
+def search_lightcurve(ID, download_dir, lkwargs, use_cached, cache_expire=30):
     """ Get time series using LightKurve
     
     Performs a search for available fits files on MAST and then downloads them

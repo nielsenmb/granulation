@@ -5,6 +5,7 @@ from dynesty import utils as dyfunc
 import distributions as dist
 import numpy as np
 import lightkurve as lk
+import lightkurveCacheAccess as lka
 jax.config.update('jax_enable_x64', True)
 
 class scalingRelations():
@@ -124,26 +125,30 @@ class granulation_fit(scalingRelations):
 
     def getPSD(self,):
 
+
+        lk_kwargs = {}
         if 'KIC' in self.ID:
-            author = 'Kepler'
-            mission = 'Kepler'
+            lk_kwargs['author'] = 'Kepler'
+            lk_kwargs['mission'] = 'Kepler'
 
             if self.numax_guess[0] > 1/(2*1800)*1e6:
-                exptime = 60
+                lk_kwargs['exptime'] = 60
             else:
-                exptime = 1800
+                lk_kwargs['exptime'] = 1800
 
         if 'TIC' in self.ID:
-            author = 'SPOC'
-            mission = 'TESS'
-            exptime = 120
+            lk_kwargs['author'] = 'SPOC'
+            lk_kwargs['mission'] = 'TESS'
+            lk_kwargs['exptime'] = 120
 
-        wlen = int(1.5e6/exptime)-1
+        wlen = int(1.5e6/lk_kwargs['exptime'])-1
         if wlen % 2 == 0:
             wlen += 1
 
-        LCcol = lk.search_lightcurve(self.ID, author=author, mission=mission, exptime=exptime).download_all(download_dir=self.download_dir)
-
+        print(lk_kwargs)
+        #LCcol = lkA.search_lightcurve(self.ID, author=author, mission=mission, exptime=exptime).download_all(download_dir=self.download_dir)
+        LCcol = lka.search_lightcurve(self.ID, self.download_dir, lk_kwargs, use_cached=True, cache_expire=10*365)
+        
         lc = LCcol.stitch().normalize().remove_nans().remove_outliers().flatten(window_length=wlen)*1e6
 
         self.pbins, self.tbins = self.determineBins(lc.time.value)
