@@ -236,7 +236,7 @@ class psd():
         if wlen % 2 == 0:
             wlen += 1
          
-        LCcol = lka.search_lightcurve(self.ID, self.downloadDir, lk_kwargs, use_cached=True, cache_expire=10*365) #.download_all(download_dir=self.downloadDir)
+        LCcol = lka.search_lightcurve(self.ID, self.downloadDir, lk_kwargs, use_cached=True, cache_expire=10*365)  
  
         lc = LCcol.stitch().normalize().remove_nans().remove_outliers().flatten(window_length=wlen)
 

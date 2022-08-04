@@ -1,6 +1,8 @@
 results/*
 scripts/*
 
+slurm*
+
 # exception to the rule
 !results/.gitkeep 
 !scripts/.gitkeep 

@@ -1,11 +1,10 @@
 #!/bin/bash
 #SBATCH --ntasks 1
-#SBATCH --time TIME
+#SBATCH --time 2:0:0
 #SBATCH --qos bbdefault
 #SBATCH --mail-type NONE
 #SBATCH --job-name=PID
 #SBATCH --account=nielsemb-plato-peakbagging
-#SBATCH --array START-END
 
 set -e
 
@@ -17,8 +16,4 @@ module load Python/3.7.4-GCCcore-8.3.0
 
 source /rds/homes/n/nielsemb/.virtualenvs/peakbogging/bin/activate
 
-echo "${SLURM_JOB_ID}: Job ${SLURM_ARRAY_TASK_ID} of ${SLURM_ARRAY_TASK_MAX} in the array"
-python -u /rds/projects/n/nielsemb-plato-peakbagging/granulation/BBscript.py ${SLURM_ARRAY_TASK_ID}
-
- 
-
+python -u /rds/projects/n/nielsemb-plato-peakbagging/granulation/download.py 4000 5000
