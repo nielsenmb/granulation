@@ -5,9 +5,7 @@ from dynesty import utils as dyfunc
 import distributions as dist
 import numpy as np
 from IO import psd
-from multiprocessing import Pool
-from multiprocessing import cpu_count
-
+ 
 os.environ["OMP_NUM_THREADS"] = "1"
 jax.config.update('jax_enable_x64', True)
 

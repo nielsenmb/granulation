@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import os
-import sys
-import traceback
+import os, sys
 import pandas as pd
 import numpy as np
-from background_fit import granulation_fit 
+from granulation_fitting import granulation_fit 
 from matplotlib.pyplot import *
 rcParams['font.size'] = 18
 
@@ -31,9 +29,9 @@ for key in new_keys:
     updated_data[key+'_err'] = np.nan
 
 figM, axM = subplots(figsize=(16,9))
-fig3, ax3 = subplots(3,3, figsize=(9,9))
-fig4, ax4 = subplots(4,4, figsize=(12,12))
-figA, axA = subplots(13,13, figsize=(32,32))
+fig3, ax3 = subplots(3, 3, figsize=(9,9))
+fig4, ax4 = subplots(4, 4, figsize=(12,12))
+figA, axA = subplots(13, 13, figsize=(32,32))
 
 cornerN = 5000
 
