@@ -124,7 +124,8 @@ def search_and_dump(ID, lkwargs, search_cache):
     store_date = current_date[:current_date.index('T')].replace('-','')
 
     search = lk.search_lightcurve(ID, exptime=lkwargs['exptime'], 
-                                  mission=lkwargs['mission'])
+                                  mission=lkwargs['mission'], 
+                                  author=lkwargs['author'])
     resultDict = {'result': search,
                   'timestamp': store_date}
     
@@ -157,7 +158,9 @@ def getMASTidentifier(ID, lkwargs):
     
     if not any([x in ID for x in ['KIC', 'TIC', 'EPIC']]):
         
-        search = lk.search_lightcurvefile(ID, exptime=lkwargs['exptime'], mission=lkwargs['mission'])
+        search = lk.search_lightcurvefile(ID, exptime=lkwargs['exptime'], 
+                                          mission=lkwargs['mission'], 
+                                          author=lkwargs['author'])
 
         if len(search) == 0:
             raise ValueError(f'No results for {ID} found on MAST')
