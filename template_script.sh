@@ -6,6 +6,7 @@
 #SBATCH --job-name=PID
 #SBATCH --account=nielsemb-plato-peakbagging
 #SBATCH --array START-END
+#SBATCH --output /rds/projects/n/nielsemb-plato-peakbagging/granulation/slurm_output/slurm-%j_%a.out
 
 set -e
 
