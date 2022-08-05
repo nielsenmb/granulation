@@ -67,7 +67,7 @@ def load_fits(files, mission):
         lcCol = lk.LightCurveCollection(lcs)
         #lc = lccol.PDCSAP_FLUX.stitch()
     elif mission in ['TESS']:
-        lcs = [lk.lightcurvefile.TessLightCurveFile(file) for file in files]
+        lcs = [lk.lightcurvefile.TessLightCurveFile(file) for file in files if file.startswith('tess')]
         lcCol = lk.LightCurveCollection(lcs)
         #lc = lccol.PDCSAP_FLUX.stitch()
     return lcCol

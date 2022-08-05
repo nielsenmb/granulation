@@ -102,8 +102,10 @@ class granulation_fit(scalingRelations):
 
         self.download_dir = download_dir
 
+        print('Init psd class')
         self.psd = psd(self.ID, numaxGuess=self.numax_guess, downloadDir=download_dir)
 
+        print('Computing psd')
         self.psd()
         
         self.f, self.p = self.psd.freq[self.psd.freq > 1], self.psd.powerdensity[self.psd.freq > 1]
@@ -315,8 +317,8 @@ class granulation_fit(scalingRelations):
     def runDynesty(self, nlive=200):
 
         sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-
-        sampler.run_nested(print_progress=True)   
+        
+        sampler.run_nested(print_progress=False)   
 
         result = sampler.results
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --ntasks 1
-#SBATCH --time 2:0:0
+#SBATCH --time 4:0:0
 #SBATCH --qos bbdefault
 #SBATCH --mail-type NONE
 #SBATCH --job-name=PID
@@ -16,4 +16,4 @@ module load Python/3.7.4-GCCcore-8.3.0
 
 source /rds/homes/n/nielsemb/.virtualenvs/peakbogging/bin/activate
 
-python -u /rds/projects/n/nielsemb-plato-peakbagging/granulation/download.py 4000 5000
+python -u /rds/projects/n/nielsemb-plato-peakbagging/granulation/download.py 10000 14000
