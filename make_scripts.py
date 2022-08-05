@@ -49,11 +49,11 @@ for idx, st in enumerate(start):
 
     sr = template.replace('START', str(start)).replace('END', str(end))
 
-    sr = sr.replace('TIME', '1:0:0') # % (int(njobs_per_batch*hrs_per_tgt)))
+    sr = sr.replace('TIME', '2:0:0') # % (int(njobs_per_batch*hrs_per_tgt)))
 
     sr = sr.replace('IDX', str(int(st)))
 
-    sr = sr.replace('PID', 'P'+str(int(st)))
+    sr = sr.replace('PID', 'P'+str(int(idx)))
 
     with open(f'scripts/script_{idx}.sh', 'w') as fout:
         fout.write(sr)

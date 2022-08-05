@@ -6,7 +6,6 @@ import distributions as dist
 import numpy as np
 from IO import psd
  
-os.environ["OMP_NUM_THREADS"] = "1"
 jax.config.update('jax_enable_x64', True)
 
 class scalingRelations():
@@ -426,6 +425,7 @@ class granulation_fit(scalingRelations):
             fig.savefig(path, dpi=300)
 
     def storeResults(self, samples, outputDir):
+
         path = os.path.join(*[outputDir, os.path.basename(outputDir) + '_samples'])
 
         np.savez_compressed(path, samples=samples)
