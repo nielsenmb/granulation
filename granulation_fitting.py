@@ -130,9 +130,19 @@ class granulation_fit(scalingRelations):
             self._lnlike = self._lnlike_std
 
     def addPriors(self):
+        """Add a list of priors as an attribute to self
+
+        The list of priors must appear in the label order (see below). 
+
+        The list contains distribution class instances similar to the scipy.stats
+        classes. These are faster though, and have been jaxed.
+
+        """
+
         self.priors = []
 
         widx = self.f > self.Nyquist - 10
+
         pw = self.p[widx].mean()
 
         # Harvey 1 (envelope harvey)
@@ -208,6 +218,20 @@ class granulation_fit(scalingRelations):
     
     @partial(jax.jit, static_argnums=(0,))
     def ptform(self, u):
+        """the prior transform function for the nested sampling
+
+        Parameters
+        ----------
+        u : list
+            List of floats between 0 and 1 with length equivalent to ndim. The 
+            ppf of each prior distribution is evaluated based on this. 
+
+        Returns
+        -------
+        x : list
+            List of floats of the prior pdfs evaluated at each point in this
+            list u.
+        """
 
         x = [self.priors[n].ppf(u[n]) for n in range(self.ndim)]
 
@@ -215,8 +239,10 @@ class granulation_fit(scalingRelations):
 
     @partial(jax.jit, static_argnums=(0,))
     def harvey(self, hsig, hnu, hexp):
-        """
-        Harvey profile
+        """ Standard Harvey profile
+
+        Note the input hsig is log10.
+
         """
 
         har = 10**hsig / hnu / (1.0 + (self._f / hnu)**hexp)
@@ -225,8 +251,10 @@ class granulation_fit(scalingRelations):
 
     @partial(jax.jit, static_argnums=(0,))
     def gaussian(self, numax, width, height):
-        """
-        Gaussian to describe oscillations
+        """ Gaussian to describe oscillations
+
+        Note the input height is log10.
+
         """
 
         m = 10**height * jnp.exp(-(self._f - numax)**2 / (2.0 * width**2))
@@ -235,7 +263,27 @@ class granulation_fit(scalingRelations):
 
     @partial(jax.jit, static_argnums=(0,))
     def model(self, params):
+        """The spectrum model
 
+        Includes 3 Harvey-like profiles, 1 Gaussian and a white noise term.
+
+        Includes reflection around the Nyquist frequency.
+
+        Parameters
+        ----------
+        params : list
+            List of model parameters.
+            
+        Returns
+        -------
+        model : array
+            The model evaluated at each frequency in the psd.
+        _model : array
+            The unreflected psd model.
+        D : dict
+            Dictionary of each model term.
+        """
+        
         hsig1, dhnu1, exp1, hsig2, dhnu2, exp2, hsig3, hnu3, exp3, numax, dwidth, height, white = params
 
         # Start with Harvey laws
