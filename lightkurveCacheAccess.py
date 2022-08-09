@@ -66,7 +66,7 @@ def load_fits(files, mission):
         lcs = [lk.lightcurvefile.KeplerLightCurveFile(file) for file in files]
         lcCol = lk.LightCurveCollection(lcs)
     elif mission in ['TESS']:
-        lcs = [lk.lightcurvefile.TessLightCurveFile(file) for file in files if file.startswith('tess')]
+        lcs = [lk.lightcurvefile.TessLightCurveFile(file) for file in files if os.path.basename(file).startswith('tess')]
         lcCol = lk.LightCurveCollection(lcs)
     return lcCol
 
@@ -126,6 +126,7 @@ def search_and_dump(ID, lkwargs, search_cache):
     search = lk.search_lightcurve(ID, exptime=lkwargs['exptime'], 
                                   mission=lkwargs['mission'], 
                                   author=lkwargs['author'])
+     
     resultDict = {'result': search,
                   'timestamp': store_date}
     
@@ -341,9 +342,9 @@ def search_lightcurve(ID, download_dir, lkwargs, use_cached, cache_expire=30):
     ID = getMASTidentifier(ID, lkwargs)
 
     search = check_sr_cache(ID, lkwargs, use_cached, download_dir=download_dir, cache_expire=cache_expire)
-    
+
     fitsFiles = check_fits_cache(search, lkwargs['mission'], download_dir=download_dir)
 
     lcCol = load_fits(fitsFiles, lkwargs['mission'])
-    
+
     return lcCol

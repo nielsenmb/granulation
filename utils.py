@@ -2,7 +2,91 @@
 import jax.numpy as jnp
 import jax.scipy.special as jsp
 import jax
+from functools import partial
 
+
+class scalingRelations():
+    """ Container for scaling relations
+
+    This is a helper class which contains methods for the various scaling
+    relations.
+
+    """
+
+    def __init_(self):
+        pass
+
+    @partial(jax.jit, static_argnums=(0,))
+    def envWidth(self, numax):
+        """ Scaling relation for the envelope width
+
+        Computest he full width at half maximum of the p-mode envelope based
+        on numax and Teff (optional).
+
+        Parameters
+        ----------
+        numax : float
+            Frequency of maximum power of the p-mode envelope.
+        Teff : float, optional
+            Effective surface temperature of the star.
+        Teff0 : float, optional
+            Solar effective temperature in K. Default is 5777 K.
+
+        Returns
+        -------
+        width : float
+            Envelope width in muHz
+        """
+
+        width = 0.66*numax**0.88 # Mosser et al. 201??
+
+        return width
+
+    @partial(jax.jit, static_argnums=(0,))
+    def nuHarveyGran(self, numax):
+        """ Harvey frequency for granulation term
+
+        Scaling relation for the characteristic frequency of the granulation
+        noise. Based on Kallinger et al. (2014).
+
+        Parameters
+        ----------
+        numax : float
+            Frequency of maximum power of the p-mode envelope.
+
+        Returns
+        -------
+        nu : float
+            Characteristic frequency of Harvey law for granulation.
+
+        """
+
+        nu = 0.317 * numax**0.970
+
+        return nu
+
+    @partial(jax.jit, static_argnums=(0,))
+    def nuHarveyEnv(self, numax):
+        """ Harvey frequency for envelope term
+
+        Scaling relation for the characteristic frequency of the envelope
+        noise. Based on Kallinger et al. (2014).
+
+        Parameters
+        ----------
+        numax : float
+            Frequency of maximum power of the p-mode envelope.
+
+        Returns
+        -------
+        nu : float
+            Characteristic frequency of Harvey law for envelope.
+
+        """
+
+        nu = 0.948 * numax**0.992
+
+        return nu
 
 class uniform():
 

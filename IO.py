@@ -7,8 +7,10 @@ from astropy.timeseries import LombScargle
 from astropy import units
 from scipy.integrate import simps
 from matplotlib.pyplot import *
+from utils import scalingRelations
 
-class psd():
+ 
+class psd(scalingRelations):
     """ Asteroseismology wrapper for Astropy Lomb-Scargle
 
     Uses the Astropy.LombScargle class to compute the power spectrum of a given
@@ -236,8 +238,8 @@ class psd():
         if wlen % 2 == 0:
             wlen += 1
          
-        LCcol = lka.search_lightcurve(self.ID, self.downloadDir, lk_kwargs, use_cached=True, cache_expire=10*365)  
- 
+        LCcol = lka.search_lightcurve(self.ID, self.downloadDir, lk_kwargs, use_cached=False, cache_expire=10*365)  
+        
         lc = LCcol.stitch().normalize().remove_nans().remove_outliers().flatten(window_length=wlen)
 
         t, d = jnp.array(lc.time.value), jnp.array(lc.flux.value)
