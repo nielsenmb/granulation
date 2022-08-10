@@ -4,6 +4,51 @@ import jax.scipy.special as jsp
 import jax
 from functools import partial
 
+@jax.jit
+def to_log10(x, xerr):
+    """ Transform to value to log10
+
+    Takes a value and related uncertainty and converts them to logscale.
+    Approximate.
+
+    Parameters
+    ----------
+    x : float
+        Value to transform to logscale
+    xerr : float
+        Value uncertainty
+
+    Returns
+    -------
+    logval : list
+        logscaled value and uncertainty
+
+    """
+
+
+
+    L = jax.lax.cond(xerr > 0,
+                     lambda A: jnp.array([jnp.log10(A[0]), A[1]/A[0]/jnp.log(10.0)]),
+                     lambda A: A,
+                     jnp.array([x, xerr]))
+
+    return L
+
+
+class jaxInterp1D():
+    """ Replacement for scipy.interpolate.interp1d in jax"""
+
+    def __init__(self, xp, fp, left=None, right=None, period=None):
+        self.xp = xp
+        self.fp = fp
+        self.left = left
+        self.right = right
+        self.period = period
+
+    @partial(jax.jit, static_argnums=(0,))
+    def __call__(self, x):
+
+        return jnp.interp(x, self.xp, self.fp, self.left, self.right, self.period)
 
 class scalingRelations():
     """ Container for scaling relations
