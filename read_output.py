@@ -43,7 +43,7 @@ for i in prior_data.index[int(sys.argv[1]): int(sys.argv[2])]:
 
     hnu2 = scr.nuHarveyGran(numax) * dhnu2
 
-    width = dwidth * scr.envWidth(numax) / (2 * jnp.sqrt(2 * jnp.log(2)))
+    width = dwidth * scr.envWidth(numax) * (1 / (2 * jnp.sqrt(2 * jnp.log(2))) / 2)
 
     percentiles= np.array([0.159, 0.5, 0.841])
 
@@ -63,4 +63,4 @@ for i in prior_data.index[int(sys.argv[1]): int(sys.argv[2])]:
 
     updated_data.at[i, 'completed'] = 1 
 
-updated_data.to_csv(os.path.join(*[workDir, 'bkgfig_output.csv']), index=False)
+updated_data.to_csv(os.path.join(*[workDir, 'bkgfit_output.csv']), index=False)
