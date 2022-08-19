@@ -4,6 +4,8 @@ import numpy as np
 import jax.scipy.special as jsp
 import jax
 from functools import partial
+import scipy.integrate as si
+import scipy.special as sc
 
 @jax.jit
 def to_log10(x, xerr):
@@ -614,3 +616,33 @@ def gen_log_space(limit, n):
 
     # round, re-adjust to 0 indexing (i.e. minus 1) and return np.uint64 array
     return np.array(list(map(lambda x: round(x)-1, result)), dtype=np.uint64)
+
+def getCurvePercentiles(x, y, percentiles=None):
+    """ Compute percentiles of value along a curve
+
+    Computes the cumulative sum of y, normalized to unit maximum. The returned
+    percentiles values are where the cumulative sum exceeds the requested
+    percentiles.
+
+    Parameters
+    ----------
+    x : array
+        Support for y.
+    y : array
+        Array
+    percentiles: array
+
+    Returns
+    -------
+    percs : array
+        Values of y at the requested percentiles.
+    """
+    if percentiles is None:
+        percentiles = [0.5 - sc.erf(n/np.sqrt(2))/2 for n in range(-2, 3)][::-1]
+
+
+    cSumNorm = si.cumtrapz(y, x, initial=0)/np.trapz(y, x)
+    
+    percs = np.array([x[cSumNorm > p][0] for p in percentiles])
+
+    return np.sort(percs)
