@@ -5,7 +5,7 @@ import glob
 import os
 
 
-batches = 20
+batches = 1
 
 
 
@@ -17,7 +17,7 @@ for f in scriptfiles:
     except OSError as e:
         print("Error: %s : %s" % (f, e.strerror))
 
-njobs = len(pd.read_csv('prior_data.csv'))
+njobs = len(pd.read_csv('outlier_run.csv'))
 
 if batches > njobs:
     batches = njobs
@@ -49,7 +49,7 @@ for idx, st in enumerate(start):
 
     sr = template.replace('START', str(start)).replace('END', str(end))
 
-    sr = sr.replace('TIME', '2:0:0') # % (int(njobs_per_batch*hrs_per_tgt)))
+    sr = sr.replace('TIME', '3:0:0') # % (int(njobs_per_batch*hrs_per_tgt)))
 
     sr = sr.replace('IDX', str(int(st)))
 
