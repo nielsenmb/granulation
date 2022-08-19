@@ -2,19 +2,23 @@ import numpy as np
 import statsmodels.api as sm
 import pandas as pd
 import warnings, jax
-from utils import jaxInterp1D
+import utils
 import jax.numpy as jnp
 from functools import partial
+import corner
 jax.config.update('jax_enable_x64', True)
 
+import sys
 
 class PCA():
 
-    def __init__(self, numax_guess, weights=None, fname='prior_data.csv'):
+    def __init__(self, numax_guess, pcalabels, weights=None, fname='PCAsample.csv', N=1000):
+         
+        self.pcalabels = pcalabels
 
         self.numax_guess = numax_guess
 
-        self.data_F, self.keys, self.dims_F, self.nsamples = self.getPCAsample(fname, 1000)
+        self.data_F, self.dims_F, self.nsamples = self.getPCAsample(fname, N)
 
         self.setWeights(weights)
 
@@ -37,6 +41,7 @@ class PCA():
 
         if w is None:
             self.weights = jnp.ones(self.nsamples)
+
         else:
             self.weights = w
 
@@ -56,8 +61,6 @@ class PCA():
         -------
         data: jax.DeviceArray
             Samples drawn from around the target numax.
-        keys : list
-            List of keywords for each variable
         ndim : int
             Number of variables (dimensions) in the prior sample.
         nsamples : int
@@ -67,15 +70,17 @@ class PCA():
 
         pdata = pd.read_csv(fname)
 
-        keys = ['bkg_numax', 'bkg_envHeight', 'bkg_envWidth', 'H1_nu', 'H2_nu', 'H1_power', 'H2_power', 'H1_exp', 'H2_exp']
+        pdata.replace([np.inf, -np.inf], np.nan, inplace=True)
 
-        pdata = self.getPriorSample(pdata, KDEsize)[keys]
+        pdata.dropna(axis=0, how="any", inplace=True)
 
-        ndim = len(keys)
+        pdata = self.getPriorSample(pdata, KDEsize)
+
+        ndim = len(self.pcalabels)
 
         nsamples = len(pdata)
 
-        return jnp.array(pdata.to_numpy()), keys, ndim, nsamples
+        return jnp.array(pdata.to_numpy()), ndim, nsamples
 
     def getPriorSample(self, pdata, KDEsize, rstate=42):
          """ Select a subsample of the prior sample data frame
@@ -111,14 +116,15 @@ class PCA():
          idx = np.zeros(len(pdata), dtype=bool)
 
          numax = np.array(self.numax_guess)
+
          # Iteratively expand the search range around input numax until either sigma
          # limit is exceeded, or target number is reached.
          nsigma = 1
 
-
          while len(pdata[idx]) < KDEsize:
 
-             idx = np.abs(pdata.numax.values - numax[0]) < nsigma * numax[1]
+             idx = np.abs(pdata.bkg_numax.values - numax[0]) < nsigma * numax[1]
+
              if (np.round(nsigma, 1) < 9.0) and (len(pdata[idx]) < KDEsize):
                  nsigma += 0.1
              else:
@@ -139,7 +145,7 @@ class PCA():
          # Use pandas dataframe built-in random sampler
          out = pdata.sample(KDEsize, weights=idx, replace=False, random_state=rstate).reset_index(drop=True)
 
-         return out
+         return out[self.pcalabels]
 
     @partial(jax.jit, static_argnums=(0,))
     def scale(self, data):
@@ -204,9 +210,9 @@ class PCA():
         self.dims_R = dim
 
         _X = self.scale(self.data_F)
-
+         
         W = jnp.diag(self.weights)
-
+        
         C = _X.T@W@_X * jnp.sum(self.weights) / (jnp.sum(self.weights)**2 - jnp.sum(self.weights**2))
 
         self.eigvals, self.eigvectors = jnp.linalg.eig(C)
@@ -214,6 +220,8 @@ class PCA():
         self.sortidx = sorted(range(len(self.eigvals)), key=lambda i: self.eigvals[i], reverse=True)[:self.dims_R]
 
         self.explained_variance_ratio = sorted(self.eigvals / jnp.sum(self.eigvals), reverse=True)
+
+        self.data_R = self.transform(self.data_F)
 
     def getQuantileFuncs(self, data):
         """
@@ -225,6 +233,8 @@ class PCA():
 
         ppfs = []
 
+        pdfs = []
+
         for i in range(data.shape[1]):
 
             kde = sm.nonparametric.KDEUnivariate(np.array(data[:, i]).real)
@@ -235,6 +245,59 @@ class PCA():
 
             A = jnp.linspace(0, 1, len(Q))
 
-            ppfs.append(jaxInterp1D(A, Q))
+            ppfs.append(utils.jaxInterp1D(A, Q))
+            
+            pdfs.append(kde.evaluate)
 
-        return ppfs
+        return ppfs, pdfs
+
+    def makeDRTrainingCorner(self, ):
+    
+        labels = [r'$\theta_%i$' % (i) for i in range(self.dims_R)]
+
+        if not hasattr(self, 'data_R'):
+            raise AttributeError('Unable to plot corner plot. Run fit_weightedPCA method first')
+
+        fig = corner.corner(self.data_R, hist_kwargs={'density': True}, labels=labels);
+        
+        axes = np.array(fig.axes).reshape((self.dims_R, self.dims_R))
+        
+        if hasattr(self, 'ppf'):
+            for i in range(self.dims_R):
+
+                utils._priorCurve(axes[i,i], self.ppf[i], self.pdf[i])
+
+        xlim, ylim = axes[0,0].get_xlim(), axes[0,0].get_ylim()
+        
+        axes[0, 0].plot([xlim[0]-1, xlim[0]-1], [ylim[0]-1, ylim[0]-1], color='k', lw=1, label='Dim. red. training sample')
+        
+        axes[0, 0].legend(bbox_to_anchor=(4.5, 1.05))
+
+    def makeTrainingCorner(self, ):
+
+        labels = self.pcalabels
+
+        fig = corner.corner(self.data_F, hist_kwargs={'density': True}, labels=labels, color = 'k');
+
+        if hasattr(self, 'data_R'):
+            Fti = self.inverse_transform(self.data_R)
+            corner.corner(Fti, hist_kwargs={'density': True}, fig=fig, labels=labels, color = 'C3')
+        
+        axes = np.array(fig.axes).reshape((self.dims_F, self.dims_F))
+
+        data_F_ppfs, data_F_pdfs = self.getQuantileFuncs(self.data_F)
+        
+        for i in range(self.dims_F):
+
+            utils._priorCurve(axes[i,i], data_F_ppfs[i], data_F_pdfs[i])
+ 
+        xlim, ylim = axes[0,0].get_xlim(), axes[0,0].get_ylim()
+
+        axes[0, 0].plot([xlim[0]-1, xlim[0]-1], [ylim[0]-1, ylim[0]-1], color='k', lw=1, label='Original training set')
+        
+        axes[0, 0].plot([xlim[0]-1, xlim[0]-1], [ylim[0]-1, ylim[0]-1], color='C3', lw=1, label='Processed training set')
+
+        axes[0, 0].legend(bbox_to_anchor=(4.5, 1.05))
+
+
+ 

@@ -1,5 +1,6 @@
 #import numpy as np
 import jax.numpy as jnp
+import numpy as np
 import jax.scipy.special as jsp
 import jax
 from functools import partial
@@ -132,6 +133,16 @@ class scalingRelations():
         nu = 0.948 * numax**0.992
 
         return nu
+
+
+class distribution():
+
+    def __init__(self, pdf, ppf):
+
+        self.pdf = pdf
+
+        self.ppf = ppf
+
 
 class uniform():
 
@@ -570,3 +581,36 @@ def betaincinv(a, b, p):
     return x
 
 
+def _priorCurve(ax, ppf, pdf):
+    
+    xl = jnp.linspace(ppf(0.001), ppf(0.5), 101)
+
+    xu = jnp.linspace(ppf(0.5), ppf(0.999), 101)
+
+    ax.plot(xl, pdf(xl), color='C0', lw=4, label='PDF below median', alpha=0.5)
+
+    ax.plot(xu, pdf(xu), color='C1', lw=4, label='PDF above median', alpha=0.5)
+
+def gen_log_space(limit, n):
+
+    result = [1]
+
+    if n>1:  # just a check to avoid ZeroDivisionError
+        ratio = (float(limit)/result[-1]) ** (1.0/(n-len(result)))
+
+    while len(result)<n:
+        next_value = result[-1]*ratio
+
+        if next_value - result[-1] >= 1:
+            # safe zone. next_value will be a different integer
+            result.append(next_value)
+
+        else:
+            # problem! same integer. we need to find next_value by artificially incrementing previous value
+            result.append(result[-1]+1)
+
+            # recalculate the ratio so that the remaining values will scale correctly
+            ratio = (float(limit)/result[-1]) ** (1.0/(n-len(result)))
+
+    # round, re-adjust to 0 indexing (i.e. minus 1) and return np.uint64 array
+    return np.array(list(map(lambda x: round(x)-1, result)), dtype=np.uint64)
