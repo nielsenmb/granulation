@@ -371,7 +371,7 @@ class granulation_fit(scalingRelations):
 
         sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
         
-        sampler.run_nested(print_progress=True)   
+        sampler.run_nested(print_progress=False)   
 
         result = sampler.results
 

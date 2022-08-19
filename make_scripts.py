@@ -17,7 +17,7 @@ for f in scriptfiles:
     except OSError as e:
         print("Error: %s : %s" % (f, e.strerror))
 
-njobs = len(pd.read_csv('outlier_run.csv'))
+njobs = len(pd.read_csv('prior_data.csv'))
 
 if batches > njobs:
     batches = njobs
