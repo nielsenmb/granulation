@@ -43,11 +43,7 @@ for i in prior_data.index[int(sys.argv[1]): int(sys.argv[2])]:
 
     hnu2 = scr.nuHarveyGran(numax) * dhnu2
 
-<<<<<<< HEAD
-    width = dwidth * scr.envWidth(numax) * (1/ (2 * jnp.sqrt(2 * jnp.log(2))) / 2)
-=======
     width = dwidth * scr.envWidth(numax) * (1 / (2 * jnp.sqrt(2 * jnp.log(2))) / 2)
->>>>>>> 46dbd3143397f22df74f8463a4d0bdd5eb23a00c
 
     percentiles= np.array([0.159, 0.5, 0.841])
 
