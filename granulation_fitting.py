@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 from functools import partial
-import jax, dynesty, corner, os
+import jax, dynesty, corner, os, dill
 from dynesty import utils as dyfunc
 import numpy as np
 from IO import psd
@@ -379,6 +379,8 @@ class granulation_fit(scalingRelations):
 
         new_samples = dyfunc.resample_equal(samples, weights)
 
+        self._samples = new_samples
+
         return sampler, new_samples
 
 
@@ -495,11 +497,15 @@ class granulation_fit(scalingRelations):
 
             fig.savefig(path, dpi=300)
 
-    def storeResults(self, samples, outputDir):
+    def storeResults(self, outputDir):
 
-        path = os.path.join(*[outputDir, os.path.basename(outputDir) + '_samples'])
+        path = os.path.join(*[outputDir, os.path.basename(outputDir) + '.gfit'])
 
-        np.savez_compressed(path, samples=samples)
+        with open(path, 'wb') as outfile:
+            dill.dump(self, outfile)
+        # 
+
+        # np.savez_compressed(path, samples=samples)
 
     def makeFullCorner(self, fig, samples, N=500, outputDir=None):
 
