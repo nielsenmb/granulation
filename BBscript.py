@@ -48,7 +48,7 @@ axM.clear()
 print('Running the sampler')
 sampler, samples = gfit.runDynesty()
 
-gfit.storeResults(samples, outputDir)
+gfit.storeResults(outputDir)
 
 gfit.plotModel(figM, axM, samples, outputDir=outputDir)
 axM.clear()
