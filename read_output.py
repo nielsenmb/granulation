@@ -1,12 +1,9 @@
 from granulation_fitting import scalingRelations
 import pandas as pd
 import numpy as np
-import os, sys
-import jax.numpy as jnp
-
-download_dir = '/rds/projects/b/ballwh-tess-yield/data'
-
-workDir = '/rds/projects/n/nielsemb-plato-peakbagging/granulation/'
+import os, sys, dill
+ 
+workDir = '/home/nielsemb/work/repos/granulation'
 
 prior_data = pd.read_csv(os.path.join(*[workDir, 'prior_data.csv']))
 
@@ -27,34 +24,39 @@ for key in new_keys:
 
 updated_data['completed'] = 0
 
-for i in prior_data.index[int(sys.argv[1]): int(sys.argv[2])]:
+start = int(sys.argv[1])
+stop = int(sys.argv[2])
+
+percentiles= np.array([0.159, 0.5, 0.841])
+
+for i in prior_data.index[start: stop]:
     
     ID = prior_data.loc[i, 'ID']
-    
+     
     try:
-        samples = np.load(os.path.join(*[workDir, 'results', ID, f'{ID}_samples.npz']))['samples']
+        path = os.path.join(*[workDir, 'results', ID, f'{ID}.gfit'])
+
+        with open(path, "rb") as inputfile:
+            gfit = dill.load(inputfile)
+
     except:
         print(i, f'{ID} samples not found.')
         continue
-
-    hsig1, dhnu1, exp1, hsig2, dhnu2, exp2, hsig3, hnu3, exp3, numax, dwidth, height, white = samples.T
-
-    hnu1 = scr.nuHarveyEnv(numax) * dhnu1
-
-    hnu2 = scr.nuHarveyGran(numax) * dhnu2
-
-    width = dwidth * scr.envWidth(numax) * (1 / (2 * jnp.sqrt(2 * jnp.log(2))) / 2)
-
-    percentiles= np.array([0.159, 0.5, 0.841])
-
-    pars = [hsig1, np.log10(hnu1), np.log10(exp1),
-            hsig2, np.log10(hnu2), np.log10(exp2),
-            hsig3, np.log10(hnu3), np.log10(exp3),
-            np.log10(numax), np.log10(width), height,
-            white]
-
-    for j, smp in enumerate(pars):
-
+    
+    nsamples = gfit._samples.shape[0]
+    
+    ndim = len(gfit.labels)
+    
+    full_samples = np.zeros((nsamples, ndim))
+    
+    for k in range(nsamples):
+        full_samples[k, :] = gfit.unpackParams(gfit._samples[k, :])
+        
+    full_samples = np.log10(full_samples)
+   
+    for j in range(ndim):
+        smp = full_samples[:, j]
+        
         percs = np.percentile(smp, percentiles)
 
         updated_data.at[i, new_keys[j]] = percs[1]
