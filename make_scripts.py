@@ -5,7 +5,7 @@ import glob
 import os
 
 
-batches = 10
+batches = 4
 
 
 
