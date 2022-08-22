@@ -53,25 +53,5 @@ gfit.storeResults(samples, outputDir)
 gfit.plotModel(figM, axM, samples, outputDir=outputDir)
 axM.clear()
 
-gfit.makeCorner(fig3, samples, cornerN, labels=['hsig1', 'dhnu1', 'hexp1'], outputDir=outputDir);
-for ax in ax3.flatten():
-   ax.clear()
-
-gfit.makeCorner(fig3, samples, cornerN, labels=['hsig2', 'dhnu2', 'hexp2'], outputDir=outputDir);
-for ax in ax3.flatten():
-   ax.clear()
-
-gfit.makeCorner(fig3, samples, cornerN, labels=['hsig3', 'hnu3', 'hexp3'], outputDir=outputDir);
-for ax in ax3.flatten():
-   ax.clear()
-
-gfit.makeCorner(fig4, samples, cornerN, labels=['numax', 'dwidth', 'height', 'white'], outputDir=outputDir);
-for ax in ax4.flatten():
-   ax.clear()
-
-gfit.makeCorner(figA, samples, cornerN, labels=gfit.labels, outputDir=outputDir);
-for ax in axA.flatten():
-   ax.clear()
-
 print('Done')
 
