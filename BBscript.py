@@ -32,7 +32,7 @@ outputDir = os.path.join(*[workDir, 'results', ID])
 if not os.path.exists(outputDir):
    os.makedirs(outputDir)
 
-if os.path.exists(os.path.join(*[outputDir, ID+'_samples.npz'])):
+if os.path.exists(os.path.join(*[outputDir, ID+'.gfit'])):
    print(f'{ID} already done, ending')
    sys.exit()
 
