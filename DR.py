@@ -12,7 +12,7 @@ import sys
 
 class PCA():
 
-    def __init__(self, numax_guess, pcalabels, weights=None, fname='PCAsample.csv', N=1000):
+    def __init__(self, numax_guess, pcalabels, weights=None, fname='PCAsample.csv', N=1000, weight_args={}):
          
         self.pcalabels = pcalabels
 
@@ -20,7 +20,7 @@ class PCA():
 
         self.data_F, self.dims_F, self.nsamples = self.getPCAsample(fname, N)
 
-        self.setWeights(weights)
+        self.setWeights(weights, weight_args)
 
         self.mu  = jnp.average(self.data_F, axis=0, weights=self.weights)
 
@@ -28,7 +28,7 @@ class PCA():
 
         self.std = jnp.sqrt(self.var)
 
-    def setWeights(self, w):
+    def setWeights(self, w, kwargs):
         """
         Set the PCA weights. If None is given then the weights are uniform.
 
@@ -38,10 +38,11 @@ class PCA():
             Array of weights of length equal to number of samples.
 
         """
-
+         
         if w is None:
             self.weights = jnp.ones(self.nsamples)
-
+        elif callable(w):
+            self.weights = w(self, **kwargs)
         else:
             self.weights = w
 
@@ -239,7 +240,7 @@ class PCA():
 
             kde = sm.nonparametric.KDEUnivariate(np.array(data[:, i]).real)
 
-            kde.fit()
+            kde.fit(adjust=2)
 
             Q = kde.icdf
 
