@@ -240,11 +240,16 @@ class PCA():
 
             kde = sm.nonparametric.KDEUnivariate(np.array(data[:, i]).real)
 
-            kde.fit(adjust=2)
+            kde.fit(cut=4)
 
-            Q = kde.icdf
+            A = jnp.linspace(0, 1, len(kde.cdf))
+            
+            # Q = kde.icdf # this ppf is only defined on the data range, which may be narrow
 
-            A = jnp.linspace(0, 1, len(Q))
+            # This ppf is wider, it goes beyond the data range to where the pdf drops to very small values.
+            Q = utils.getCurvePercentiles(kde.support, 
+                                          kde.evaluate(kde.support),
+                                          percentiles=A)
 
             ppfs.append(utils.jaxInterp1D(A, Q))
             

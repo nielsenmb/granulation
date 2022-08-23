@@ -617,7 +617,7 @@ def gen_log_space(limit, n):
     # round, re-adjust to 0 indexing (i.e. minus 1) and return np.uint64 array
     return np.array(list(map(lambda x: round(x)-1, result)), dtype=np.uint64)
 
-def getCurvePercentiles(x, y, percentiles=None):
+def getCurvePercentiles(x, y, cdf = None, percentiles=None):
     """ Compute percentiles of value along a curve
 
     Computes the cumulative sum of y, normalized to unit maximum. The returned
@@ -640,9 +640,22 @@ def getCurvePercentiles(x, y, percentiles=None):
     if percentiles is None:
         percentiles = [0.5 - sc.erf(n/np.sqrt(2))/2 for n in range(-2, 3)][::-1]
 
+    y /= si.trapezoid(y, x)
 
-    cSumNorm = si.cumtrapz(y, x, initial=0)/np.trapz(y, x)
+    if cdf is None:
+        cdf = si.cumtrapz(y, x, initial=0)
+        cdf /= cdf.max()  
     
-    percs = np.array([x[cSumNorm > p][0] for p in percentiles])
+    percs = np.zeros(len(percentiles))
+
+    for i, p in enumerate(percentiles):
+        
+        q = x[cdf >= p]
+
+        # if len(q) == 0:
+        #     percs[i] = percs[i-1]
+        # else:
+        
+        percs[i] = q[0]
 
     return np.sort(percs)
