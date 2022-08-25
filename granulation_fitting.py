@@ -12,7 +12,7 @@ jax.config.update('jax_enable_x64', True)
 
 class granulation_fit(scalingRelations):
  
-    def __init__(self, ID, numax, download_dir, pcadim=None, fname='PCAsample.csv', weights=None, weight_args={}):
+    def __init__(self, ID, numax, download_dir, pcadim=None, fname='PCAsample.csv', weights=None, weight_args={}, N=1000):
 
         self.ID = ID
 
@@ -64,7 +64,7 @@ class granulation_fit(scalingRelations):
 
             self.ndim = pcadim + (len(self.labels) - len(self.pcalabels)) 
 
-            self.initPCA(pcadim, weights, weight_args)
+            self.initPCA(pcadim, weights, weight_args, N=N)
 
         else:
             self.ndim = len(self.labels)
@@ -116,9 +116,9 @@ class granulation_fit(scalingRelations):
         # White noise
         self.priors.append(utils.normal(mu=jnp.log10(pw), sigma=2))
  
-    def initPCA(self, PCAdim, weights, weight_args):
+    def initPCA(self, PCAdim, weights, weight_args, N):
        
-        self.DR = PCA(self.log_numax_guess, self.pcalabels, weights=weights, weight_args=weight_args)
+        self.DR = PCA(self.log_numax_guess, self.pcalabels, weights=weights, weight_args=weight_args, N = N)
 
         self.DR.fit_weightedPCA(PCAdim)
 
