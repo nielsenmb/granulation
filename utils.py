@@ -6,6 +6,8 @@ import jax
 from functools import partial
 import scipy.integrate as si
 import scipy.special as sc
+import scipy.stats as st
+from matplotlib.pyplot import *
 
 @jax.jit
 def to_log10(x, xerr):
@@ -659,3 +661,91 @@ def getCurvePercentiles(x, y, cdf = None, percentiles=None):
         percs[i] = q[0]
 
     return np.sort(percs)
+
+def plotScatter(samples, keys, c=None, indx=None):
+    
+    if indx is None:
+        indx = np.zeros(samples.shape[0], dtype=bool)
+    
+    N = len(keys)
+    
+    fig, ax = subplots(N, N , figsize=(20,20))
+
+    for i in range(N):
+     
+        for j in range(N):
+
+            xdata = samples[keys[j]]
+            if 'exp' in keys[j]:
+                xdata = 10**xdata
+
+            ydata = samples[keys[i]]
+            if 'exp' in keys[i]:
+                ydata = 10**ydata
+
+            xlims = np.nanpercentile(xdata, [0.001, 99.999])
+             
+            ylims = np.nanpercentile(ydata, [0.001, 99.999])
+
+            if i == j:
+
+                
+                y_in = ydata[~indx]
+
+                K = st.gaussian_kde(y_in[~np.isnan(y_in)], bw_method=0.15)
+
+                _x = np.linspace(xlims[0], xlims[1], 200)
+
+                ax[i, j].plot(_x, K(_x), color='C0')
+
+                ax[i, j].fill_between(_x, K(_x), color='C0', alpha=1)
+                
+                y_out = ydata[indx]
+                 
+                if len(y_out) > 0:
+                    K = st.gaussian_kde(y_out[~np.isnan(y_out)], bw_method=0.15)
+
+                    _x = np.linspace(xlims[0], xlims[1], 200)
+
+                    ax[i, j].plot(_x, K(_x), color='C1')
+
+                    ax[i, j].fill_between(_x, K(_x), color='C1', alpha=0.5)
+    
+                ax[i, j].set_yticks([])
+
+                ax[i, j].set_xlim(xlims[0], xlims[1])
+
+                #ax[i, j].set_ylim(0, max(K(_x))*1.1)
+
+            elif i > j:
+
+                ax[i, j].scatter(xdata[~indx], ydata[~indx], s=10, alpha=0.5, c=c)
+
+                # Plot outliers if any
+                if indx is not None:
+                    ax[i, j].scatter(xdata[indx], ydata[indx], s=20, alpha=1, color='C1')
+
+                ax[i, j].set_xlim(xlims[0], xlims[1])
+
+                ax[i, j].set_ylim(ylims[0], ylims[1])
+
+            else:
+                ax[i, j].axis('off')
+
+
+            if i < N-1:
+                ax[i, j].set_xticks([])
+
+            if (j > 0) & (j < N-1):
+                ax[i, j].set_yticks([])
+
+
+            if (i == N-1):
+                ax[i, j].set_xlabel(keys[j])
+
+            if (i > 0) and (j == 0):
+                    ax[i, j].set_ylabel(keys[i])
+            
+    fig.tight_layout()
+
+    return fig, ax
