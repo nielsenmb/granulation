@@ -498,14 +498,28 @@ class granulation_fit(scalingRelations):
             fig.savefig(path, dpi=300)
 
     def storeResults(self, outputDir):
+         
+        # Store the class instance
+        gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + '.gfit'])
 
-        path = os.path.join(*[outputDir, os.path.basename(outputDir) + '.gfit'])
-
-        with open(path, 'wb') as outfile:
+        with open(gfitpath, 'wb') as outfile:
             dill.dump(self, outfile)
-        # 
 
-        # np.savez_compressed(path, samples=samples)
+        # Store the packed samples
+        spath = os.path.join(*[outputDir, os.path.basename(outputDir) + '_samples'])
+        np.savez_compressed(spath, samples=self._samples)
+
+        # Store the unpacked samples
+        Nsamples = self._samples.shape[0]
+
+        full_samples = np.zeros((Nsamples, len(self.labels)))
+
+        for k in range(Nsamples):
+            full_samples[k, :] = self.unpackParams(self._samples[k, :])
+         
+        fspath = os.path.join(*[outputDir, os.path.basename(outputDir) + '_full_samples'])
+        np.savez_compressed(fspath, samples=full_samples)
+        
 
     def makeFullCorner(self, fig, samples, N=500, outputDir=None):
 
