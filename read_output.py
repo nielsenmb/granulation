@@ -1,68 +1,57 @@
-from granulation_fitting import scalingRelations
 import pandas as pd
 import numpy as np
-import os, sys, dill
+import os, sys
  
-workDir = '/home/nielsemb/work/repos/granulation'
+#download_dir = '/home/nielsemb/work/mounts/Bluebear_data/data'
+download_dir = '/rds/projects/b/ballwh-tess-yield/data'
+
+#workDir = '/home/nielsemb/work/mounts/Bluebear_projects/granulation'
+workDir = '/rds/projects/n/nielsemb-plato-peakbagging/granulation/'
 
 prior_data = pd.read_csv(os.path.join(*[workDir, 'prior_data.csv']))
-
-scr = scalingRelations()
-
-updated_data = prior_data.copy()
-
-new_keys = ['H1_power', 'H1_nu', 'H1_exp',
+ 
+new_keys = ['bkg_numax', 'bkg_envHeight', 'bkg_envWidth', 
+            'H1_power', 'H1_nu', 'H1_exp',
             'H2_power', 'H2_nu', 'H2_exp',
             'H3_power', 'H3_nu', 'H3_exp',
-            'bkg_numax', 'bkg_envWidth', 'bkg_envHeight',
             'shot']
 
 for key in new_keys:
-    updated_data[key] = np.nan
+    prior_data[key] = np.nan
     
-    updated_data[key+'_err'] = np.nan
+    prior_data[key+'_err'] = np.nan
 
-updated_data['completed'] = 0
+prior_data['completed'] = 0
 
 start = int(sys.argv[1])
 stop = int(sys.argv[2])
 
-percentiles= np.array([0.159, 0.5, 0.841])
-
 for i in prior_data.index[start: stop]:
     
     ID = prior_data.loc[i, 'ID']
-     
+    print(ID)
+    
     try:
-        path = os.path.join(*[workDir, 'results', ID, f'{ID}.gfit'])
-
-        with open(path, "rb") as inputfile:
-            gfit = dill.load(inputfile)
-
+        full_samples = np.load(os.path.join(*[workDir, 'results', ID, f'{ID}_full_samples.npz']))['samples']
     except:
         print(i, f'{ID} samples not found.')
         continue
     
-    nsamples = gfit._samples.shape[0]
-    
-    ndim = len(gfit.labels)
-    
-    full_samples = np.zeros((nsamples, ndim))
-    
-    for k in range(nsamples):
-        full_samples[k, :] = gfit.unpackParams(gfit._samples[k, :])
-        
     full_samples = np.log10(full_samples)
-   
-    for j in range(ndim):
+    
+    # numax, height, width, hsig1, hnu1, exp1, hsig2, hnu2, exp2, hsig3, hnu3, exp3, w
+    percentiles= np.array([0.159, 0.5, 0.841])
+
+    for j in range(full_samples.shape[1]):
+
         smp = full_samples[:, j]
         
         percs = np.percentile(smp, percentiles)
 
-        updated_data.at[i, new_keys[j]] = percs[1]
+        prior_data.at[i, new_keys[j]] = percs[1]
 
-        updated_data.at[i, new_keys[j]+'_err'] = np.mean(np.diff(percs))
+        prior_data.at[i, new_keys[j]+'_err'] = np.mean(np.diff(percs))
 
-    updated_data.at[i, 'completed'] = 1 
+    prior_data.at[i, 'completed'] = 1 
 
-updated_data.to_csv(os.path.join(*[workDir, 'bkgfit_output.csv']), index=False)
+prior_data.to_csv(os.path.join(*[workDir, 'bkgfit_output.csv']), index=False)
