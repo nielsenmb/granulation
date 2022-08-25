@@ -30,7 +30,7 @@ for i in prior_data.index[start: stop]:
     
     ID = prior_data.loc[i, 'ID']
     print(ID)
-    
+
     try:
         full_samples = np.load(os.path.join(*[workDir, 'results', ID, f'{ID}_full_samples.npz']))['samples']
     except:
@@ -40,7 +40,7 @@ for i in prior_data.index[start: stop]:
     full_samples = np.log10(full_samples)
     
     # numax, height, width, hsig1, hnu1, exp1, hsig2, hnu2, exp2, hsig3, hnu3, exp3, w
-    percentiles= np.array([0.159, 0.5, 0.841])
+    percentiles= np.array([0.159, 0.5, 0.841]) * 100
 
     for j in range(full_samples.shape[1]):
 
