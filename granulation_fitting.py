@@ -370,8 +370,8 @@ class granulation_fit(scalingRelations):
     def runDynesty(self, nlive=200, dynamic=False):
 
         if dynamic:
-            sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim)
-            sampler.run_nested(print_progress=False, wt_kwargs={'pfrac': 1.0})   
+            sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
+            sampler.run_nested(print_progress=False, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
         else:
             sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
             sampler.run_nested(print_progress=False)
@@ -556,3 +556,5 @@ class granulation_fit(scalingRelations):
             
             utils._priorCurve(axes[i + self.DR.dims_F, i + self.DR.dims_F], self.priors[j].ppf, self.priors[j].pdf)
 
+from dynesty import plotting as dyplot
+dyplot
