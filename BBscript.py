@@ -7,6 +7,13 @@ from granulation_fitting import granulation_fit
 from matplotlib.pyplot import *
 rcParams['font.size'] = 18
 
+def wfunc(self, n=1):
+     
+    ppf, pdf = self.getQuantileFuncs(self.data_F[:, :1])
+
+    w = 1/pdf[0](self.data_F[:, 0])**n
+       
+    return w
 
 download_dir = '/rds/projects/b/ballwh-tess-yield/data'
 
@@ -32,21 +39,21 @@ outputDir = os.path.join(*[workDir, 'results', ID])
 if not os.path.exists(outputDir):
    os.makedirs(outputDir)
 
-if os.path.exists(os.path.join(*[outputDir, ID+'.gfit'])):
-   print(f'{ID} already done, ending')
-   sys.exit()
+# if os.path.exists(os.path.join(*[outputDir, ID+'_full_sample.npz'])):
+#    print(f'{ID} already done, ending')
+#    sys.exit()
 
 _numax = prior_data.loc[i, 'numax']
 numax = (10**_numax, 0.1*10**_numax)
 
 print('Initializing fit class')
-gfit = granulation_fit(ID, numax, download_dir, pcadim=9)
+gfit = granulation_fit(ID, numax, download_dir, pcadim=9, weights=wfunc, weight_args={'n':2}, N=200)
 
 gfit.plotModel(figM, axM, outputDir=outputDir);
 axM.clear()
 
 print('Running the sampler')
-sampler, samples = gfit.runDynesty()
+sampler, samples = gfit.runDynesty(dynamic=False)
 
 gfit.storeResults(outputDir)
 
