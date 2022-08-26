@@ -53,7 +53,7 @@ gfit.plotModel(figM, axM, outputDir=outputDir);
 axM.clear()
 
 print('Running the sampler')
-sampler, samples = gfit.runDynesty(dynamic=False)
+sampler, samples = gfit.runDynesty(dynamic=True)
 
 gfit.storeResults(outputDir)
 
