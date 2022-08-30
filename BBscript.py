@@ -30,6 +30,8 @@ cornerN = 5000
 
 i = int(sys.argv[1]) - 1
 
+pcadim = int(sys.argv[2])
+
 ID = prior_data.loc[i, 'ID']
 
 print(f'{ID}')
@@ -47,7 +49,7 @@ _numax = prior_data.loc[i, 'numax']
 numax = (10**_numax, 0.1*10**_numax)
 
 print('Initializing fit class')
-gfit = granulation_fit(ID, numax, download_dir, pcadim=9, weights=wfunc, weight_args={'n':2}, N=200)
+gfit = granulation_fit(ID, numax, download_dir, pcadim=pcadim, weights=wfunc, weight_args={'n':2}, N=200)
 
 gfit.plotModel(figM, axM, outputDir=outputDir);
 axM.clear()

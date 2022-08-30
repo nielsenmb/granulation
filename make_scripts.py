@@ -7,7 +7,7 @@ import os
 
 batches = 4
 
-
+pcadim = 0
 
 scriptfiles = glob.glob('scripts/script_*.sh')
 
@@ -54,6 +54,8 @@ for idx, st in enumerate(start):
     sr = sr.replace('IDX', str(int(st)))
 
     sr = sr.replace('PID', 'P'+str(int(idx)))
+
+    sr = sr.replace('NPCA', str(pcadim))
 
     with open(f'scripts/script_{idx}.sh', 'w') as fout:
         fout.write(sr)
