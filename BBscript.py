@@ -35,6 +35,11 @@ pcadim = int(sys.argv[2])
 if pcadim > 0:
    print(f'Running with {pcadim} pca dimensions')
 
+if pcadim > 0:
+    ext = f'_pca{pcadim}'
+else:
+    ext = ''
+
 ID = prior_data.loc[i, 'ID']
 
 print(f'{ID}')
@@ -44,9 +49,9 @@ outputDir = os.path.join(*[workDir, 'results', ID])
 if not os.path.exists(outputDir):
    os.makedirs(outputDir)
 
-# if os.path.exists(os.path.join(*[outputDir, ID+'_full_sample.npz'])):
-#    print(f'{ID} already done, ending')
-#    sys.exit()
+if os.path.exists(os.path.join(*[outputDir, ID+f'_full_sample{ext}.npz'])):
+   print(f'{ID} already done, ending')
+   sys.exit()
 
 _numax = prior_data.loc[i, 'numax']
 numax = (10**_numax, 0.1*10**_numax)
