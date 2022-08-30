@@ -50,9 +50,9 @@ class granulation_fit(scalingRelations):
                        'H3_power', 'H3_nu', 'H3_exp',
                        'white']
 
-        if pcadim is not None:
+        if pcadim > 0:
             self.with_pca = True
-
+            
         else:
             self.with_pca = False
 
