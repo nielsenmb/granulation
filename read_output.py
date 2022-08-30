@@ -26,13 +26,20 @@ prior_data['completed'] = 0
 start = int(sys.argv[1])
 stop = int(sys.argv[2])
 
+pcadim = int(sys.argv[3])
+
+if pcadim > 0:
+    ext = f'_pca{pcadim}'
+else:
+    ext = ''
+
 for i in prior_data.index[start: stop]:
     
     ID = prior_data.loc[i, 'ID']
     print(ID)
 
     try:
-        full_samples = np.load(os.path.join(*[workDir, 'results', ID, f'{ID}_full_samples.npz']))['samples']
+        full_samples = np.load(os.path.join(*[workDir, 'results', ID, f'{ID}_full_samples{ext}.npz']))['samples']
     except:
         print(i, f'{ID} samples not found.')
         continue
@@ -54,4 +61,4 @@ for i in prior_data.index[start: stop]:
 
     prior_data.at[i, 'completed'] = 1 
 
-prior_data.to_csv(os.path.join(*[workDir, 'bkgfit_output_w_pca9.csv']), index=False)
+prior_data.to_csv(os.path.join(*[workDir, 'bkgfit_output{ext}.csv']), index=False)

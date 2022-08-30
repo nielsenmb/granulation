@@ -52,7 +52,7 @@ class granulation_fit(scalingRelations):
 
         if pcadim > 0:
             self.with_pca = True
-            
+
         else:
             self.with_pca = False
 
@@ -510,11 +510,11 @@ class granulation_fit(scalingRelations):
 
         # Store the packed samples
         if self.with_pca:
-            ext = f'_samples_pca{self.DR.dims_R}'
+            ext = f'_pca{self.DR.dims_R}'
         else:
-            ext = '_samples'
+            ext = ''
 
-        spath = os.path.join(*[outputDir, os.path.basename(outputDir) + ext])
+        spath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_samples{ext}'])
         
         np.savez_compressed(spath, samples=self._samples)
 
@@ -527,11 +527,11 @@ class granulation_fit(scalingRelations):
             full_samples[k, :] = self.unpackParams(self._samples[k, :])
         
         if self.with_pca:
-            ext = f'_full_samples_pca{self.DR.dims_R}'
+            ext = f'_pca{self.DR.dims_R}'
         else:
-            ext = '_full_samples'
+            ext = ''
 
-        fspath = os.path.join(*[outputDir, os.path.basename(outputDir) + ext])
+        fspath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_full_samples{ext}'])
 
         np.savez_compressed(fspath, samples=full_samples)
         
