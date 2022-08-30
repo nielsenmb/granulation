@@ -509,7 +509,13 @@ class granulation_fit(scalingRelations):
             dill.dump(self, outfile)
 
         # Store the packed samples
-        spath = os.path.join(*[outputDir, os.path.basename(outputDir) + '_samples'])
+        if self.with_pca:
+            ext = f'_samples_pca{self.DR.dims_R}'
+        else:
+            ext = '_samples'
+
+        spath = os.path.join(*[outputDir, os.path.basename(outputDir) + ext])
+        
         np.savez_compressed(spath, samples=self._samples)
 
         # Store the unpacked samples
@@ -519,8 +525,14 @@ class granulation_fit(scalingRelations):
 
         for k in range(Nsamples):
             full_samples[k, :] = self.unpackParams(self._samples[k, :])
-         
-        fspath = os.path.join(*[outputDir, os.path.basename(outputDir) + '_full_samples'])
+        
+        if self.with_pca:
+            ext = f'_full_samples_pca{self.DR.dims_R}'
+        else:
+            ext = '_full_samples'
+
+        fspath = os.path.join(*[outputDir, os.path.basename(outputDir) + ext])
+
         np.savez_compressed(fspath, samples=full_samples)
         
 
