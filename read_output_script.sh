@@ -16,4 +16,4 @@ module load Python/3.7.4-GCCcore-8.3.0
 
 source /rds/homes/n/nielsemb/.virtualenvs/peakbogging/bin/activate
 
-python -u /rds/projects/n/nielsemb-plato-peakbagging/granulation/read_output.py 0 1400
+python -u /rds/projects/n/nielsemb-plato-peakbagging/granulation/read_output.py 0 1400 0
