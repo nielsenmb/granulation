@@ -350,10 +350,10 @@ class granulation_fit(scalingRelations):
 
         if dynamic:
             sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-            sampler.run_nested(print_progress=True, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
+            sampler.run_nested(print_progress=False, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
         else:
             sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-            sampler.run_nested(print_progress=True)
+            sampler.run_nested(print_progress=False)
 
         result = sampler.results
 
