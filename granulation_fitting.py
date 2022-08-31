@@ -491,7 +491,7 @@ class granulation_fit(scalingRelations):
         if self.with_pca:
             ext = f'_pca{self.DR.dims_R}'
         else:
-            ext = ''
+            ext = '_nopca'
 
         spath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_samples{ext}'])
         
