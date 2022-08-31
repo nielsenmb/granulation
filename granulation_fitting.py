@@ -97,14 +97,14 @@ class granulation_fit(scalingRelations):
             self.priors.append(utils.normal(mu=self.numax_guess[0], 
                                             sigma=self.numax_guess[1]))
 
-            # Envelope dwidth
-            self.priors.append(utils.beta(a=1.2, b=1.2, loc=0.2, scale=2))
-
             # Envelope height
             numax_idx = (abs(self.f - self.numax_guess[0]) < self.envWidth(self.numax_guess[0]))
             self.priors.append(utils.normal(mu=jnp.log10(self.p[numax_idx].mean()), sigma=2))
 
-             # Harvey 1 (envelope harvey)
+            # Envelope dwidth
+            self.priors.append(utils.beta(a=1.2, b=1.2, loc=0.2, scale=3))
+
+            # Harvey 1 (envelope harvey)
             self.addHarveyPriors(self.nuHarveyEnv(self.numax_guess[0]), pw)
 
             # Harvey 2 (granulation)
@@ -112,20 +112,11 @@ class granulation_fit(scalingRelations):
 
         # Harvey 3 Activity
         self.addHarveyPriors(self.f[0], pw)
+        self.priors[-2] = utils.beta(a=1.2, b=1.2, loc=0, scale=6) # replace H1_nu prior with a beta distribution
 
         # White noise
         self.priors.append(utils.normal(mu=jnp.log10(pw), sigma=2))
  
-    def initPCA(self, PCAdim, weights, weight_args, N):
-       
-        self.DR = PCA(self.log_numax_guess, self.pcalabels, weights=weights, weight_args=weight_args, N = N)
-
-        self.DR.fit_weightedPCA(PCAdim)
-
-        _Y = self.DR.transform(self.DR.data_F)
-
-        self.DR.ppf, self.DR.pdf = self.DR.getQuantileFuncs(_Y)
-
     def addHarveyPriors(self, nuH, pw):
         """ Append Harvey law prior
 
@@ -161,10 +152,20 @@ class granulation_fit(scalingRelations):
 
         self.priors.append(utils.normal(mu=jnp.log10(mu*nuH), sigma=2)) # hsig
 
-        self.priors.append(utils.beta(a=1.2, b=1.2, loc=0.2, scale=6)) # hnu
+        self.priors.append(utils.normal(mu=1, sigma=0.15)) # dhnu
 
-        self.priors.append(utils.beta(a=1.2, b=1.2, loc=0.5, scale=5)) # hexp
-    
+        self.priors.append(utils.beta(a=1.2, b=1.2, loc=1.5, scale=3.5)) # hexp
+
+    def initPCA(self, PCAdim, weights, weight_args, N):
+       
+        self.DR = PCA(self.log_numax_guess, self.pcalabels, weights=weights, weight_args=weight_args, N = N)
+
+        self.DR.fit_weightedPCA(PCAdim)
+
+        _Y = self.DR.transform(self.DR.data_F)
+
+        self.DR.ppf, self.DR.pdf = self.DR.getQuantileFuncs(_Y)   
+
     def eta(self,):
         return jnp.sinc(self._f / 2.0 / self.Nyquist)**2.0    
     
@@ -301,7 +302,7 @@ class granulation_fit(scalingRelations):
             w = 10**white
 
         else:
-            numax, dwidth, height, hsig1, dhnu1, exp1, hsig2, dhnu2, exp2, hsig3, hnu3, exp3, white = theta
+            numax, height, dwidth, hsig1, dhnu1, exp1, hsig2, dhnu2, exp2, hsig3, hnu3, exp3, white = theta
 
             height = 10**height
 
@@ -322,47 +323,25 @@ class granulation_fit(scalingRelations):
         return numax, height, width, hsig1, hnu1, exp1, hsig2, hnu2, exp2, hsig3, hnu3, exp3, w
 
     @partial(jax.jit, static_argnums=(0,))
-    def lnfactorial(self, n):
-        """ log(n!) approximation
-
-        For large n the scipy/numpy implimentations croak when doing factorials.
-
-        We therefore use the Ramanujan approximation to compute log(n!).
-
-        Parameters:
-        -----------
-        n : int
-            Value to compute the factorial of.
-
-        Returns
-        -------
-        r : float
-            The approximate value of log(n!)
-        """
-
-        r = n * jnp.log(n) - n + jnp.log(n*(1+4*n*(1+2*n)))/6 + jnp.log(jnp.pi)/2
-
-        return r
-
-    @partial(jax.jit, static_argnums=(0,))
     def _lnlike_std(self, mod):
         L = -jnp.sum(jnp.log(mod) + self.p/mod)
         return L
 
     @partial(jax.jit, static_argnums=(0,))
     def _lnlike_binned(self, mod):
-        L = jnp.sum((self.psd.pbins-1)*(jnp.log(self.psd.pbins) + jnp.log(self.p)) - self.lnfactorial(self.psd.pbins-1) - self.psd.pbins*(jnp.log(mod) + self.p/mod))
+        L = jnp.sum((self.psd.pbins-1)*(jnp.log(self.psd.pbins) + jnp.log(self.p)) - utils.lnfactorial(self.psd.pbins-1) - self.psd.pbins*(jnp.log(mod) + self.p/mod))
         return L
 
     @partial(jax.jit, static_argnums=(0,))
     def lnlike(self, params):
+         
+        mod, _mod, _, extra = self.model(params)
 
-        mod, _mod, _, extra= self.model(params)
- 
+        # hnu3 is bounded at 0, so hnu2 is in turn also bounded at 0 if hnu3 < hnu2. Same for hnu1 and numax.
         T = (extra['hnu3'] < extra['hnu2']) & \
             (extra['hnu2'] < extra['numax']) & \
-            (extra['hnu1']/extra['hnu2'] > 1.1)
-
+            (extra['hnu2'] < extra['hnu1'])
+ 
         L = jax.lax.cond(T, self._lnlike, lambda mod: -jnp.inf, mod)
 
         return L
@@ -371,10 +350,10 @@ class granulation_fit(scalingRelations):
 
         if dynamic:
             sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-            sampler.run_nested(print_progress=False, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
+            sampler.run_nested(print_progress=True, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
         else:
             sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-            sampler.run_nested(print_progress=False)
+            sampler.run_nested(print_progress=True)
 
         result = sampler.results
 
@@ -556,17 +535,18 @@ class granulation_fit(scalingRelations):
 
         corner.corner(full_samples, labels=self.labels, hist_kwargs={'density': True}, fig=fig);
         
-        Fti = self.DR.inverse_transform(self.DR.data_R)
-        
-        Fti_ppfs, Fti_pdfs = self.DR.getQuantileFuncs(Fti)
-        
-        for i in range(self.DR.dims_F):
+        if self.with_pca:
+            Fti = self.DR.inverse_transform(self.DR.data_R)
             
-            utils._priorCurve(axes[i, i], Fti_ppfs[i], Fti_pdfs[i])
+            Fti_ppfs, Fti_pdfs = self.DR.getQuantileFuncs(Fti)
+            
+            for i in range(self.DR.dims_F):
+                
+                utils._priorCurve(axes[i, i], Fti_ppfs[i], Fti_pdfs[i])
 
-        for i, j in enumerate(range(self.DR.dims_R, self.DR.dims_R + len(self.labels) - self.DR.dims_F)):
-            
-            utils._priorCurve(axes[i + self.DR.dims_F, i + self.DR.dims_F], self.priors[j].ppf, self.priors[j].pdf)
+            for i, j in enumerate(range(self.DR.dims_R, self.DR.dims_R + len(self.labels) - self.DR.dims_F)):
+                
+                utils._priorCurve(axes[i + self.DR.dims_F, i + self.DR.dims_F], self.priors[j].ppf, self.priors[j].pdf)
 
 from dynesty import plotting as dyplot
 dyplot
