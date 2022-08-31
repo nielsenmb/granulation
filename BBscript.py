@@ -32,27 +32,44 @@ i = int(sys.argv[1]) - 1
 
 pcadim = int(sys.argv[2])
 
-if pcadim > 0:
-   print(f'Running with {pcadim} pca dimensions')
-
-if pcadim > 0:
-    ext = f'_pca{pcadim}'
+if sys.argv[3] == 'True':
+    clear = True
 else:
-    ext = ''
+    clear = False
 
 ID = prior_data.loc[i, 'ID']
 
 print(f'{ID}')
 
+if pcadim > 0:
+   print(f'Running with {pcadim} pca dimensions')
+
+
+# Establish output dir
 outputDir = os.path.join(*[workDir, 'results', ID])
 
 if not os.path.exists(outputDir):
    os.makedirs(outputDir)
 
-if os.path.exists(os.path.join(*[outputDir, ID+f'_full_sample{ext}.npz'])):
-   print(f'{ID} already done, ending')
-   sys.exit()
 
+# Check for pre-existing runs. Clear if needed.
+if pcadim > 0:
+    ext = f'_pca{pcadim}'
+else:
+    ext = '_nopca'
+
+fnames = {'full_sample': os.path.join(*[outputDir, ID+f'_full_sample{ext}.npz'])}
+
+if os.path.exists(fnames['full_sample']):
+    if clear:
+        os.remove(fnames['full_sample'])
+        print('Removing %s' % (os.path.basename(fnames['full_sample'])))
+    else:
+        print(f'{ID} already done, ending')
+        sys.exit()
+
+
+# Start setup
 _numax = prior_data.loc[i, 'numax']
 numax = (10**_numax, 0.1*10**_numax)
 

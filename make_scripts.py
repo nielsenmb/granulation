@@ -9,6 +9,8 @@ batches = 4
 
 pcadim = 0
 
+clear = False
+
 scriptfiles = glob.glob('scripts/script_*.sh')
 
 for f in scriptfiles:
