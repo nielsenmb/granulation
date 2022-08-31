@@ -662,14 +662,16 @@ def getCurvePercentiles(x, y, cdf = None, percentiles=None):
 
     return np.sort(percs)
 
-def plotScatter(samples, keys, c=None, indx=None):
+def plotScatter(samples, keys, fig=None, c=None, indx=None):
     
     if indx is None:
         indx = np.zeros(samples.shape[0], dtype=bool)
     
     N = len(keys)
     
-    fig, ax = subplots(N, N , figsize=(20,20))
+    if fig is None:
+        fig, ax = subplots(N, N , figsize=(20,20))
+
 
     for i in range(N):
      
@@ -749,3 +751,27 @@ def plotScatter(samples, keys, c=None, indx=None):
     fig.tight_layout()
 
     return fig, ax
+
+
+@partial(jax.jit, static_argnums=(0,))
+def lnfactorial(self, n):
+    """ log(n!) approximation
+
+    For large n the scipy/numpy implimentations croak when doing factorials.
+
+    We therefore use the Ramanujan approximation to compute log(n!).
+
+    Parameters:
+    -----------
+    n : int
+        Value to compute the factorial of.
+
+    Returns
+    -------
+    r : float
+        The approximate value of log(n!)
+    """
+
+    r = n * jnp.log(n) - n + jnp.log(n*(1+4*n*(1+2*n)))/6 + jnp.log(jnp.pi)/2
+
+    return r
