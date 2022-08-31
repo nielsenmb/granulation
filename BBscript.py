@@ -58,6 +58,8 @@ if pcadim > 0:
 else:
     ext = '_nopca'
 
+    
+
 fnames = {'full_sample': os.path.join(*[outputDir, ID+f'_full_sample{ext}.npz'])}
 
 if os.path.exists(fnames['full_sample']):
