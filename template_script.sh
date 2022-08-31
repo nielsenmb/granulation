@@ -18,6 +18,7 @@ module load Python/3.7.4-GCCcore-8.3.0
 
 source /rds/homes/n/nielsemb/.virtualenvs/peakbogging/bin/activate
 
+
 echo "${SLURM_JOB_ID}: Job ${SLURM_ARRAY_TASK_ID} of ${SLURM_ARRAY_TASK_MAX} in the array"
 python -u /rds/projects/n/nielsemb-plato-peakbagging/granulation/BBscript.py ${SLURM_ARRAY_TASK_ID} NPCA CLEAR
 
