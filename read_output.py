@@ -31,7 +31,7 @@ pcadim = int(sys.argv[3])
 if pcadim > 0:
     ext = f'_pca{pcadim}'
 else:
-    ext = ''
+    ext = '_nopca'
 
 for i in prior_data.index[start: stop]:
     
