@@ -542,6 +542,4 @@ class granulation_fit(scalingRelations):
             for i, j in enumerate(range(self.DR.dims_R, self.DR.dims_R + len(self.labels) - self.DR.dims_F)):
                 
                 utils._priorCurve(axes[i + self.DR.dims_F, i + self.DR.dims_F], self.priors[j].ppf, self.priors[j].pdf)
-
-from dynesty import plotting as dyplot
-dyplot
+ 
