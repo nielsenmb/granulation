@@ -504,12 +504,7 @@ class granulation_fit(scalingRelations):
 
         for k in range(Nsamples):
             full_samples[k, :] = self.unpackParams(self._samples[k, :])
-        
-        if self.with_pca:
-            ext = f'_pca{self.DR.dims_R}'
-        else:
-            ext = ''
-
+      
         fspath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_full_samples{ext}'])
 
         np.savez_compressed(fspath, samples=full_samples)
