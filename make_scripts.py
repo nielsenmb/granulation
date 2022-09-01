@@ -52,7 +52,7 @@ for idx, st in enumerate(start):
 
     sr = template.replace('START', str(start)).replace('END', str(end))
 
-    sr = sr.replace('TIME', '3:0:0') # % (int(njobs_per_batch*hrs_per_tgt)))
+    sr = sr.replace('TIME', '1:30:0') # % (int(njobs_per_batch*hrs_per_tgt)))
 
     sr = sr.replace('IDX', str(int(st)))
 
