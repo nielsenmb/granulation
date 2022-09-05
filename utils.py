@@ -585,15 +585,20 @@ def betaincinv(a, b, p):
     return x
 
 
-def _priorCurve(ax, ppf, pdf):
+def _priorCurve(ax, ppf, pdf, split=True):
     
-    xl = jnp.linspace(ppf(0.001), ppf(0.5), 101)
+    if split:
+        xl = jnp.linspace(ppf(0.001), ppf(0.5), 101)
 
-    xu = jnp.linspace(ppf(0.5), ppf(0.999), 101)
+        xu = jnp.linspace(ppf(0.5), ppf(0.999), 101)
 
-    ax.plot(xl, pdf(xl), color='C0', lw=4, label='PDF below median', alpha=0.5)
+        ax.plot(xl, pdf(xl), color='C0', lw=4, label='PDF below median', alpha=0.5)
 
-    ax.plot(xu, pdf(xu), color='C1', lw=4, label='PDF above median', alpha=0.5)
+        ax.plot(xu, pdf(xu), color='C1', lw=4, label='PDF above median', alpha=0.5)
+    else:
+        x = jnp.linspace(ppf(0.001), ppf(0.999), 101)
+
+        ax.plot(x, pdf(x), color='C0', lw=4, label='KDE of transformed prior sample', ls='dashed', alpha=0.5)
 
 def gen_log_space(limit, n):
 
