@@ -194,7 +194,7 @@ class PCA():
     def transform(self, X):
 
         _X = self.scale(X)
-
+         
         Y = self.eigvectors[:, self.sortidx].T.dot(_X.T)
 
         return Y.T.real
@@ -207,7 +207,7 @@ class PCA():
         return self.invert_scale(_X).real
 
     def fit_weightedPCA(self, dim):
-
+       
         self.dims_R = dim
 
         _X = self.scale(self.data_F)
@@ -223,6 +223,7 @@ class PCA():
         self.explained_variance_ratio = sorted(self.eigvals / jnp.sum(self.eigvals), reverse=True)
 
         self.data_R = self.transform(self.data_F)
+         
 
     def getQuantileFuncs(self, data):
         """

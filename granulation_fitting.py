@@ -185,8 +185,6 @@ class granulation_fit(scalingRelations):
             List of floats of the prior pdfs evaluated at each point in this
             list u.
         """
-
-        #x_DR = jnp.array([self.DR.ppf[i](u[i]) for i in range(self.DR.dims_R)])
  
         x = jnp.array([self.priors[i].ppf(u[i]) for i in range(self.ndim)])
 
@@ -287,13 +285,15 @@ class granulation_fit(scalingRelations):
         """
         if self.with_pca:
             # The sample used for DR is in log10, so the inverse transform 
-            theta_invT = 10**self.DR.inverse_transform(theta[:self.DR.dims_R])
+            theta_invT = self.DR.inverse_transform(theta[:self.DR.dims_R])
             
-            numax, height, width  = theta_invT[0:3] 
+            numax, height, width  = 10**theta_invT[0:3] 
 
-            hsig1, hnu1, exp1 = theta_invT[3:6] 
+            hsig1, hnu1 = 10**theta_invT[3:5] 
+            exp1 = theta_invT[5] 
     
-            hsig2, hnu2, exp2 = theta_invT[6:9]
+            hsig2, hnu2 = 10**theta_invT[6:8]
+            exp2 = theta_invT[8]
 
             hsig3, hnu3, exp3, white = theta[self.DR.dims_R:]
 
@@ -350,10 +350,10 @@ class granulation_fit(scalingRelations):
 
         if dynamic:
             sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-            sampler.run_nested(print_progress=False, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
+            sampler.run_nested(print_progress=True, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
         else:
             sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-            sampler.run_nested(print_progress=False)
+            sampler.run_nested(print_progress=True)
 
         result = sampler.results
 

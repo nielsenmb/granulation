@@ -1,5 +1,0 @@
-#!/bin/bash
-
-for filename in scripts/*.sh; do
-  sbatch $filename
-done
