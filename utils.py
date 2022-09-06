@@ -683,12 +683,12 @@ def plotScatter(samples, keys, fig=None, c=None, indx=None):
         for j in range(N):
 
             xdata = samples[keys[j]]
-            if 'exp' in keys[j]:
-                xdata = 10**xdata
+            # if 'exp' in keys[j]:
+            #     xdata = 10**xdata
 
             ydata = samples[keys[i]]
-            if 'exp' in keys[i]:
-                ydata = 10**ydata
+            # if 'exp' in keys[i]:
+            #     ydata = 10**ydata
 
             xlims = np.nanpercentile(xdata, [0.001, 99.999])
              

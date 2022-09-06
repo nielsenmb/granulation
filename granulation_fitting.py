@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 from functools import partial
-import jax, dynesty, corner, os, dill
+import jax, dynesty, corner, os, dill, time
 from dynesty import utils as dyfunc
 import numpy as np
 from IO import psd
@@ -346,15 +346,16 @@ class granulation_fit(scalingRelations):
 
         return L
 
-    def runDynesty(self, nlive=200, dynamic=False):
+    def runDynesty(self, nlive=200, dynamic=False, progress=False):
 
+        tstart = time.time()
         if dynamic:
             sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-            sampler.run_nested(print_progress=False, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
+            sampler.run_nested(print_progress=progress, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
         else:
             sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive)
-            sampler.run_nested(print_progress=False)
-
+            sampler.run_nested(print_progress=progress)
+        tend = time.time()
         result = sampler.results
 
         samples, weights = result.samples, jnp.exp(result.logwt - result.logz[-1])
@@ -362,6 +363,14 @@ class granulation_fit(scalingRelations):
         new_samples = dyfunc.resample_equal(samples, weights)
 
         self._samples = new_samples
+
+        self.run_stats = {'iterations': sampler.it,
+                          'ncall': sampler.ncall,
+                          'nbound': sampler.nbound,
+                          'eff': sampler.eff,
+                          'runtime': tend-tstart}
+
+        self.sampler = sampler
 
         return sampler, new_samples
 
@@ -480,19 +489,19 @@ class granulation_fit(scalingRelations):
             fig.savefig(path, dpi=300)
 
     def storeResults(self, outputDir):
-         
-        # Store the class instance
-        gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + '.gfit'])
-
-        with open(gfitpath, 'wb') as outfile:
-            dill.dump(self, outfile)
-
-        # Store the packed samples
+        
         if self.with_pca:
             ext = f'_pca{self.DR.dims_R}'
         else:
             ext = '_nopca'
 
+        # Store the class instance
+        gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.gfit'])
+
+        with open(gfitpath, 'wb') as outfile:
+            dill.dump(self, outfile)
+
+        # Store the packed samples
         spath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_samples{ext}'])
         
         np.savez_compressed(spath, samples=self._samples)
