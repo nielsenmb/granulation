@@ -2,7 +2,7 @@ results/*
 scripts/*
 
 slurm*
-figs*
+
 
 # exception to the rule
 !results/.gitkeep 
