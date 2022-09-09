@@ -46,7 +46,7 @@ class PCA():
         else:
             self.weights = w
 
-    def getPCAsample(self, fname, KDEsize):
+    def getPCAsample(self, fname, nsamples):
         """
         Retrieve the prior samples from a provided csv file.
 
@@ -75,7 +75,8 @@ class PCA():
 
         pdata.dropna(axis=0, how="any", inplace=True)
 
-        pdata = self.getPriorSample(pdata, KDEsize)
+        #pdata = self.getPriorSample(pdata, nsamples)
+        pdata = self.findNearest(pdata, nsamples)
 
         ndim = len(self.pcalabels)
 
@@ -147,6 +148,19 @@ class PCA():
          out = pdata.sample(KDEsize, weights=idx, replace=False, random_state=rstate).reset_index(drop=True)
 
          return out[self.pcalabels]
+
+
+    def findNearest(self, pdata, N=100):
+
+        numax = np.array(self.numax_guess)
+
+        dnumax = pdata['bkg_numax'].values - numax[0] 
+
+        sortidx = np.argsort(abs(dnumax))
+        
+        out = pdata.loc[sortidx, :][:N]
+        
+        return out[self.pcalabels]
 
     @partial(jax.jit, static_argnums=(0,))
     def scale(self, data):
@@ -221,6 +235,8 @@ class PCA():
         self.sortidx = sorted(range(len(self.eigvals)), key=lambda i: self.eigvals[i], reverse=True)[:self.dims_R]
 
         self.explained_variance_ratio = sorted(self.eigvals / jnp.sum(self.eigvals), reverse=True)
+
+        self.erank = jnp.exp(-jnp.sum(self.explained_variance_ratio * np.log(self.explained_variance_ratio))).real
 
         self.data_R = self.transform(self.data_F)
          

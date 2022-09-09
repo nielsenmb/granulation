@@ -332,7 +332,7 @@ class beta():
 
             idx = (0 < _x) & (_x < 1)
 
-            _y = _x[idx]**self.am1 * (1 - _x[idx])**self.bm1
+            _y = _x**self.am1 * (1 - _x)**self.bm1
 
             y = y.at[idx].set(_y)
 
@@ -383,7 +383,7 @@ class beta():
             y = jnp.zeros_like(_x) - jnp.inf
 
             idx = (0 < _x) & (_x < 1)
-
+             
             _y = self.am1 * jnp.log(_x[idx]) + self.bm1 * jnp.log(1-_x[idx])
 
             y = y.at[idx].set(_y)
