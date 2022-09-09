@@ -164,7 +164,7 @@ class granulation_fit(scalingRelations):
 
         _Y = self.DR.transform(self.DR.data_F)
 
-        self.DR.ppf, self.DR.pdf = self.DR.getQuantileFuncs(_Y)   
+        self.DR.ppf, self.DR.pdf, self.DR.cdf = self.DR.getQuantileFuncs(_Y)   
 
     def eta(self,):
         return jnp.sinc(self._f / 2.0 / self.Nyquist)**2.0    
@@ -542,7 +542,7 @@ class granulation_fit(scalingRelations):
         if self.with_pca:
             Fti = self.DR.inverse_transform(self.DR.data_R)
             
-            Fti_ppfs, Fti_pdfs = self.DR.getQuantileFuncs(Fti)
+            Fti_ppfs, Fti_pdfs, Fti_cdfs = self.DR.getQuantileFuncs(Fti)
             
             for i in range(self.DR.dims_F):
                 

@@ -253,6 +253,8 @@ class PCA():
 
         pdfs = []
 
+        cdfs = []
+
         for i in range(data.shape[1]):
 
             kde = sm.nonparametric.KDEUnivariate(np.array(data[:, i]).real)
@@ -260,6 +262,8 @@ class PCA():
             kde.fit(cut=4)
 
             A = jnp.linspace(0, 1, len(kde.cdf))
+
+            cdfs.append(kde.cdf)
             
             # Q = kde.icdf # this ppf is only defined on the data range, which may be narrow
 
@@ -272,7 +276,7 @@ class PCA():
             
             pdfs.append(kde.evaluate)
 
-        return ppfs, pdfs
+        return ppfs, pdfs, cdfs
 
     def makeDRTrainingCorner(self, ):
     
