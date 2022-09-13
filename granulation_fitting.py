@@ -35,7 +35,7 @@ class granulation_fit(scalingRelations):
 
         self.eta = self.eta()
 
-        # Envelope width conversion factor
+        # Envelope width conversion factor (only used when running without pca)
         self.wfac = 1 / (2 * jnp.sqrt(2 * jnp.log(2))) / 2
 
         if self.psd.pbins > 1:
@@ -43,6 +43,7 @@ class granulation_fit(scalingRelations):
         else:
             self._lnlike = self._lnlike_std
 
+        # Labels for all the parameters
         self.labels = ['bkg_numax', 'bkg_envHeight', 'bkg_envWidth',
                        'H1_power', 'H1_nu', 'H1_exp',
                        'H2_power', 'H2_nu', 'H2_exp',
@@ -51,12 +52,12 @@ class granulation_fit(scalingRelations):
 
         if pcadim > 0:
             self.with_pca = True
-
         else:
             self.with_pca = False
 
         if self.with_pca:
             
+            # Labels for parameters to be used in the pca
             self.pcalabels = ['bkg_numax', 'bkg_envHeight', 'bkg_envWidth',
                               'H1_power', 'H1_nu', 'H1_exp',
                               'H2_power', 'H2_nu', 'H2_exp',]
