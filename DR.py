@@ -229,7 +229,9 @@ class PCA():
         W = jnp.diag(self.weights)
         
         C = _X.T@W@_X * jnp.sum(self.weights) / (jnp.sum(self.weights)**2 - jnp.sum(self.weights**2))
-
+        
+        self.covariance = C
+        
         self.eigvals, self.eigvectors = jnp.linalg.eig(C)
 
         self.sortidx = sorted(range(len(self.eigvals)), key=lambda i: self.eigvals[i], reverse=True)[:self.dims_R]
