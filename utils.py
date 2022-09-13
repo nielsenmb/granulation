@@ -39,7 +39,6 @@ def to_log10(x, xerr):
 
     return L
 
-
 class jaxInterp1D():
     """ Replacement for scipy.interpolate.interp1d in jax"""
 
@@ -138,14 +137,17 @@ class scalingRelations():
 
         return nu
 
-
 class distribution():
 
-    def __init__(self, pdf, ppf):
+    def __init__(self, ppf, pdf, logpdf, cdf):
 
         self.pdf = pdf
 
         self.ppf = ppf
+
+        self.logpdf = logpdf
+
+        self.cdf = cdf
 
 
 class uniform():
@@ -328,13 +330,13 @@ class beta():
 
         if isinstance(x, (jnp.ndarray, )):
 
-            y = jnp.zeros_like(_x)
+            #y = jnp.zeros_like(_x)
 
-            idx = (0 < _x) & (_x < 1)
+            #idx = (0 < _x) & (_x < 1)
 
-            _y = _x**self.am1 * (1 - _x)**self.bm1
+            y = _x**self.am1 * (1 - _x)**self.bm1
 
-            y = y.at[idx].set(_y)
+            #y = y.at[idx].set(_y)
 
 
         elif isinstance(x, (float, int)):
@@ -345,10 +347,10 @@ class beta():
                 y = _x**self.am1 * (1 - _x)**self.bm1
 
         if norm:
-            return y * self.fac
+            return jnp.array([y * self.fac])
 
         else:
-            return y
+            return jnp.array([y])
 
     def logpdf(self, x, norm=True):
         """ Return log-PDF
@@ -382,11 +384,12 @@ class beta():
 
             y = jnp.zeros_like(_x) - jnp.inf
 
-            idx = (0 < _x) & (_x < 1)
+            #idx = (0 < _x) & (_x < 1)
              
-            _y = self.am1 * jnp.log(_x[idx]) + self.bm1 * jnp.log(1-_x[idx])
+            #y = self.am1 * jnp.log(_x[idx]) + self.bm1 * jnp.log(1-_x[idx])
+            y = self.am1 * jnp.log(_x) + self.bm1 * jnp.log(1-_x)
 
-            y = y.at[idx].set(_y)
+            #y = y.at[idx].set(_y)
 
         elif isinstance(x, (float, int)):
             if _x <=0 or _x>=1:
@@ -474,9 +477,9 @@ class normal():
         y = jnp.exp( self.fac * (x - self.mu)**2)
 
         if norm:
-            return y * self.norm
+            return jnp.array([y * self.norm])
         else:
-            return y
+            return jnp.array([y])
 
     def logpdf(self, x, norm=True):
         """ Return log-PDF
