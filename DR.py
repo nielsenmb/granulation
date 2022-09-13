@@ -226,13 +226,9 @@ class PCA():
 
         _X = self.scale(self.data_F)
          
-        W = jnp.diag(self.weights)
+        self.covariance = self.covarianceMatrix(_X)
         
-        C = _X.T@W@_X * jnp.sum(self.weights) / (jnp.sum(self.weights)**2 - jnp.sum(self.weights**2))
-        
-        self.covariance = C
-        
-        self.eigvals, self.eigvectors = jnp.linalg.eig(C)
+        self.eigvals, self.eigvectors = jnp.linalg.eig(self.covariance)
 
         self.sortidx = sorted(range(len(self.eigvals)), key=lambda i: self.eigvals[i], reverse=True)[:self.dims_R]
 
@@ -241,7 +237,14 @@ class PCA():
         self.erank = jnp.exp(-jnp.sum(self.explained_variance_ratio * np.log(self.explained_variance_ratio))).real
 
         self.data_R = self.transform(self.data_F)
-         
+
+    def covarianceMatrix(self, _X):
+
+        W = jnp.diag(self.weights)
+        
+        C = _X.T@W@_X * jnp.sum(self.weights) / (jnp.sum(self.weights)**2 - jnp.sum(self.weights**2))
+
+        return C
 
     def getQuantileFuncs(self, data):
         """
