@@ -12,7 +12,7 @@ import sys
 
 class PCA():
 
-    def __init__(self, numax_guess, pcalabels, weights=None, fname='PCAsample.csv', N=1000, weight_args={}):
+    def __init__(self, numax_guess, pcalabels, fname, weights=None, N=1000, weight_args={}):
          
         self.pcalabels = pcalabels
 

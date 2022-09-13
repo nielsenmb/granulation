@@ -64,8 +64,8 @@ class granulation_fit(scalingRelations):
 
             self.ndim = pcadim + (len(self.labels) - len(self.pcalabels)) 
 
-            self.initPCA(pcadim, weights, weight_args, N=N)
-
+            self.initPCA(pcadim, weights, weight_args, N, fname)
+                 
         else:
             self.ndim = len(self.labels)
 
@@ -159,10 +159,10 @@ class granulation_fit(scalingRelations):
 
         self.priors.append(utils.beta(a=1.2, b=1.2, loc=1.5, scale=3.5)) # hexp
 
-    def initPCA(self, PCAdim, weights, weight_args, N):
+    def initPCA(self, PCAdim, weights, weight_args, N, fname):
        
-        self.DR = PCA(self.log_numax_guess, self.pcalabels, weights=weights, 
-                      weight_args=weight_args, N=N)
+        self.DR = PCA(self.log_numax_guess, self.pcalabels, fname, weights=weights, 
+                      weight_args=weight_args, N=N) 
 
         self.DR.fit_weightedPCA(PCAdim)
 
