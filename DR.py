@@ -75,8 +75,8 @@ class PCA():
 
         pdata.dropna(axis=0, how="any", inplace=True)
 
-        #pdata = self.getPriorSample(pdata, nsamples)
-        pdata = self.findNearest(pdata, nsamples)
+        pdata = self.getPriorSample(pdata, nsamples)
+        #pdata = self.findNearest(pdata, nsamples)
 
         ndim = len(self.pcalabels)
 
@@ -255,6 +255,8 @@ class PCA():
 
         cdfs = []
 
+        logpdfs = []
+
         for i in range(data.shape[1]):
 
             kde = sm.nonparametric.KDEUnivariate(np.array(data[:, i]).real)
@@ -265,18 +267,19 @@ class PCA():
 
             cdfs.append(kde.cdf)
             
-            # Q = kde.icdf # this ppf is only defined on the data range, which may be narrow
-
-            # This ppf is wider, it goes beyond the data range to where the pdf drops to very small values.
+            # The icdf from statsmodels is only evaluated on the input values,
+            # not the complete support of the pdf which may be wider. 
             Q = utils.getCurvePercentiles(kde.support, 
                                           kde.evaluate(kde.support),
                                           percentiles=A)
 
             ppfs.append(utils.jaxInterp1D(A, Q))
             
-            pdfs.append(kde.evaluate)
+            pdfs.append(utils.jaxInterp1D(kde.support, kde.evaluate(kde.support)))
 
-        return ppfs, pdfs, cdfs
+            logpdfs.append(utils.jaxInterp1D(kde.support, jnp.log(kde.evaluate(kde.support))))
+
+        return ppfs, pdfs, logpdfs, cdfs
 
     def makeDRTrainingCorner(self, ):
     
@@ -312,7 +315,7 @@ class PCA():
         
         axes = np.array(fig.axes).reshape((self.dims_F, self.dims_F))
 
-        data_F_ppfs, data_F_pdfs = self.getQuantileFuncs(self.data_F)
+        data_F_ppfs, data_F_pdfs, _, _ = self.getQuantileFuncs(self.data_F)
         
         for i in range(self.dims_F):
 
