@@ -1,12 +1,11 @@
 import jax.numpy as jnp
 from functools import partial
-import jax, dynesty, corner, os, dill, time
+import jax, dynesty, corner, os, dill, time, emcee, utils
 from dynesty import utils as dyfunc
 import numpy as np
 from IO import psd
 from utils import scalingRelations
 from DR import PCA
-import utils
 jax.config.update('jax_enable_x64', True)
 
 
@@ -91,7 +90,10 @@ class granulation_fit(scalingRelations):
         if self.with_pca:
             # Add pca parameters to the list of prior objects
             for i in range(self.DR.dims_R):
-                self.priors.append(utils.distribution(self.DR.pdf[i], self.DR.ppf[i]))
+                self.priors.append(utils.distribution(self.DR.ppf[i], 
+                                                      self.DR.pdf[i], 
+                                                      self.DR.logpdf[i], 
+                                                      self.DR.cdf[i]))
         else:
              # numax
             self.priors.append(utils.normal(mu=self.numax_guess[0], 
@@ -158,13 +160,14 @@ class granulation_fit(scalingRelations):
 
     def initPCA(self, PCAdim, weights, weight_args, N):
        
-        self.DR = PCA(self.log_numax_guess, self.pcalabels, weights=weights, weight_args=weight_args, N = N)
+        self.DR = PCA(self.log_numax_guess, self.pcalabels, weights=weights, 
+                      weight_args=weight_args, N=N)
 
         self.DR.fit_weightedPCA(PCAdim)
 
         _Y = self.DR.transform(self.DR.data_F)
 
-        self.DR.ppf, self.DR.pdf, self.DR.cdf = self.DR.getQuantileFuncs(_Y)   
+        self.DR.ppf, self.DR.pdf, self.DR.logpdf, self.DR.cdf = self.DR.getQuantileFuncs(_Y)   
 
     def eta(self,):
         return jnp.sinc(self._f / 2.0 / self.Nyquist)**2.0    
@@ -374,6 +377,40 @@ class granulation_fit(scalingRelations):
 
         return sampler, new_samples
 
+    @partial(jax.jit, static_argnums=(0,))
+    def sumPrior(self, params):
+        
+        lnPr = jnp.sum(jnp.array([self.priors[i].logpdf(params[i]) for i in range(self.ndim)]))
+        
+        return lnPr
+
+    @partial(jax.jit, static_argnums=(0,))
+    def lnPost(self, params):
+
+        lnPr = self.sumPrior(params)
+
+        lnL = self.lnlike(params)
+
+        T = jnp.isnan(lnL) | jnp.isnan(lnPr)
+
+        L = jax.lax.cond(T, lambda lnPr, lnL: -jnp.inf, lambda lnPr, lnL: lnPr + lnL, lnPr, lnL)
+
+        return L
+
+    def runEmcee(self, nwalkers=100, nsteps=100, burn = 0.8, accept=0.16, progress=False):
+
+        p0 = jnp.array([self.ptform(np.random.uniform(low=0, high=1, size=self.ndim)) for i in range(nwalkers)])
+
+        sampler = emcee.EnsembleSampler(nwalkers, self.ndim, self.lnPost)
+
+        sampler.run_mcmc(p0, nsteps=nsteps, progress=progress);
+
+        idx= sampler.acceptance_fraction > accept
+
+        samples = sampler.chain[idx, int(burn*nsteps):, :]
+
+        return sampler, samples
+
 
 
 
@@ -542,7 +579,7 @@ class granulation_fit(scalingRelations):
         if self.with_pca:
             Fti = self.DR.inverse_transform(self.DR.data_R)
             
-            Fti_ppfs, Fti_pdfs, Fti_cdfs = self.DR.getQuantileFuncs(Fti)
+            Fti_ppfs, Fti_pdfs, _, _ = self.DR.getQuantileFuncs(Fti)
             
             for i in range(self.DR.dims_F):
                 
