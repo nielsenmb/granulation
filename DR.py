@@ -12,11 +12,11 @@ import sys
 
 class PCA():
 
-    def __init__(self, numax_guess, pcalabels, fname, weights=None, N=1000, weight_args={}):
+    def __init__(self, obs, pcalabels, fname, N, weights=None, weight_args={}):
          
         self.pcalabels = pcalabels
 
-        self.numax_guess = numax_guess
+        self.obs = obs
 
         self.data_F, self.dims_F, self.nsamples = self.getPCAsample(fname, N)
 
@@ -75,8 +75,10 @@ class PCA():
 
         pdata.dropna(axis=0, how="any", inplace=True)
 
-        pdata = self.getPriorSample(pdata, nsamples)
-        #pdata = self.findNearest(pdata, nsamples)
+        pdata.reset_index(inplace=True)
+
+        #pdata = self.getPriorSample(pdata, nsamples)
+        pdata = self.findNearest(pdata, nsamples)
 
         ndim = len(self.pcalabels)
 
@@ -150,14 +152,17 @@ class PCA():
          return out[self.pcalabels]
 
 
-    def findNearest(self, pdata, N=100):
+    def findNearest(self, pdata, N, precision='low'):
 
-        numax = np.array(self.numax_guess)
+        if precision == 'low':
+            keys = ['numax']
+        else:
+            keys = self.obs.keys()
+ 
+        deltas = np.array([pdata[key].values - self.obs[key][0] for key in keys])
 
-        dnumax = pdata['bkg_numax'].values - numax[0] 
-
-        sortidx = np.argsort(abs(dnumax))
-        
+        sortidx = np.argsort( np.sqrt(np.sum(deltas**2, axis=0)))
+         
         out = pdata.loc[sortidx, :][:N]
         
         return out[self.pcalabels]
