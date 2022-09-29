@@ -421,15 +421,16 @@ class spectrum_fit(scalingRelations, asymptotic):
 
         return lnL
 
-    def runDynesty(self, nlive=200, dynamic=False, progress=False):
+    def runDynesty(self, nlive=100, dynamic=False, progress=False):
 
         tstart = time.time()
         if dynamic:
             sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive, sample='rwalk', bound='balls')
             sampler.run_nested(print_progress=progress, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
-        else:
+        else:           
             sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive, sample='rwalk', bound='balls')
             sampler.run_nested(print_progress=progress)
+
         tend = time.time()
         result = sampler.results
 
