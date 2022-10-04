@@ -421,14 +421,14 @@ class spectrum_fit(scalingRelations, asymptotic):
 
         return lnL
 
-    def runDynesty(self, nlive=100, dynamic=False, progress=False):
+    def runDynesty(self, nlive=300, dynamic=False, progress=False):
 
         tstart = time.time()
         if dynamic:
-            sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive, sample='rwalk', bound='balls')
+            sampler = dynesty.DynamicNestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive, sample='rwalk')
             sampler.run_nested(print_progress=progress, wt_kwargs={'pfrac': 1.0}, dlogz_init=1e-3 * (nlive - 1) + 0.01, nlive_init=nlive)   
         else:           
-            sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive, sample='rwalk', bound='balls')
+            sampler = dynesty.NestedSampler(self.lnlike, self.ptform, self.ndim, nlive=nlive, sample='rwalk')
             sampler.run_nested(print_progress=progress)
 
         tend = time.time()
@@ -482,22 +482,6 @@ class spectrum_fit(scalingRelations, asymptotic):
         samples = sampler.chain[idx, int(burn*nsteps):, :]
 
         return sampler, samples
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -597,21 +581,21 @@ class spectrum_fit(scalingRelations, asymptotic):
             fig.savefig(path, dpi=300)
 
     def storeResults(self, outputDir):
-        
+            
         if self.with_pca:
-            ext = f'_pca{self.DR.dims_R}'
+            ext = f'pca{self.DR.dims_R}'
         else:
-            ext = '_nopca'
+            ext = 'nopca'
 
         # Store the class instance
-        gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.gfit'])
+        #gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.gfit'])
 
-        with open(gfitpath, 'wb') as outfile:
-            dill.dump(self, outfile)
+        #with open(gfitpath, 'wb') as outfile:
+        #    dill.dump(self, outfile)
 
         # Store the packed samples
-        spath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_samples{ext}'])
-        
+        spath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_samples_{ext}'])
+
         np.savez_compressed(spath, samples=self._samples)
 
         # Store the unpacked samples
@@ -620,9 +604,12 @@ class spectrum_fit(scalingRelations, asymptotic):
         full_samples = np.zeros((Nsamples, len(self.labels)))
 
         for k in range(Nsamples):
-            full_samples[k, :] = self.unpackParams(self._samples[k, :])
-      
-        fspath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_full_samples{ext}'])
+            
+            theta_asy, theta_bkg, theta_extra = self.unpackParams(self._samples[k, :])
+            
+            full_samples[k, :] = np.hstack((np.array(theta_asy), np.array(theta_bkg), np.array(theta_extra['teff']), np.array(theta_extra['bp_rp'])))
+
+        fspath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_full_samples_{ext}'])
 
         np.savez_compressed(fspath, samples=full_samples)
         
