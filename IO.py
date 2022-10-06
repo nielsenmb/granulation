@@ -8,7 +8,7 @@ from utils import scalingRelations
 import os, pickle, re
 import lightkurve as lk
 from datetime import datetime
-
+from numba import jit
  
 class psd(scalingRelations):
     """ Asteroseismology wrapper for Astropy Lomb-Scargle
@@ -82,7 +82,7 @@ class psd(scalingRelations):
     """
 
     def __init__(self, ID, time=None, flux=None, flux_err=None, numaxGuess=None, 
-                 downloadDir='./',fit_mean=False, timeConversion=86400):
+                 downloadDir='./',fit_mean=False, timeConversion=86400, tBinsMax=3, pBinsMax=10):
 
         self.ID = ID
 
@@ -93,14 +93,14 @@ class psd(scalingRelations):
             time, flux = self._getTS(numaxGuess)
 
             flux = (flux/np.nanmedian(flux) - 1) * 1e6
-        
+         
         self._time = time
         
         self._flux = flux
 
         self._getBadIndex(time, flux)
 
-        self.pbins, self.tbins = self.determineBins(time[self.indx], numaxGuess)
+        self.pbins, self.tbins = self.determineBins(time[self.indx], numaxGuess, tBinsMax=tBinsMax, pBinsMax=pBinsMax)
  
         if self.tbins > 1:  
             print(f'Binning time series by {self.tbins}')
@@ -137,37 +137,53 @@ class psd(scalingRelations):
 
         self.df = self._fundamental_spacing_integral()
 
-    def determineBins(self, t, numax_guess, tgtLen=1e5, nW=2, tBinMax=3, pBinMax=10):
+    def determineBins(self, t, numaxGuess, tgtLen=1e5, nW=2, tBinsMax=3, pBinsMax=10):
 
         df = 1/((t[-1] - t[0])*24*60*60)*1e6
 
         nyq = 1/(2*np.median(np.diff(t*24*60*60)))*1e6
 
-        if (numax_guess is None) or nyq < 1000:
+        if (numaxGuess is None) or nyq < 1000:
             nT = 1
         else:
-            nT = min([max([nyq//(numax_guess[0] + nW*self.envWidth(numax_guess[0])), 1]), tBinMax])
+            nT = min([max([nyq//(numaxGuess + nW*self.envWidth(numaxGuess)), 1]), tBinsMax])
 
         nP = 1
 
         while (nyq//nT-df*nP)//(df*nP) > tgtLen:
             nP += 1
 
-        if nP > pBinMax:
-            nP = pBinMax
+        if nP > pBinsMax:
+            nP = pBinsMax
 
         return int(nP), int(nT)
 
     def binning(self, _t, _d, n):
+        """
+        Binning is done in chunks.
 
+        Parameters
+        ----------
+        _t : _type_
+            _description_
+        _d : _type_
+            _description_
+        n : _type_
+            _description_
+
+        Returns
+        -------
+        _type_
+            _description_
+        """
         N = len(_t)
 
         t, d = np.array([]), np.array([])
 
-        Nc = 200000
+        Nc = 100000
 
         for i in range(N//Nc+1):
-
+             
             _x , _y = self._binTS(_t[i*Nc: (i+1)*Nc], _d[i*Nc: (i+1)*Nc], n)
 
             t = np.append(t, _x)
@@ -175,32 +191,34 @@ class psd(scalingRelations):
             d = np.append(d, _y)
 
         return t, d
-
+     
     def _binTS(self, t, d, n):
 
         dt = np.median(np.diff(t))
 
-        T = np.array([])
+        T = np.zeros_like(t)  
 
-        D = np.array([])
+        D = np.zeros_like(d)  
 
-        i = 0
-
+        i, j = 0, 0
+ 
         while i < len(t)-n+1:
+            
+            dT = t[i+n-1] - t[i]
 
-            dT = t[i+n-1]-t[i]
-
-            if dT < (n+1)*dt:
-                T = np.append(T, t[i+n-1]-dT/2)
-
-                D = np.append(D, np.mean(d[i:i+n]))
-
+            if dT < (n + 1) * dt:
+                
+                T[j] = t[i + n - 1] - dT / 2
+ 
+                D[j] = np.mean(d[i:i+n])
+ 
                 i += n
 
+                j += 1
             else:
                 i +=1
-
-        return T, D
+                
+        return T[:j], D[:j]
 
     def _getTS(self, numaxGuess):
         """Get time series with lightkurve
@@ -224,7 +242,7 @@ class psd(scalingRelations):
             lk_kwargs['author'] = 'Kepler'
             lk_kwargs['mission'] = 'Kepler'
 
-            if numaxGuess[0] > 1/(2*1800)*1e6:
+            if numaxGuess > 1/(2*1800)*1e6:
                 lk_kwargs['exptime'] = 60
             else:
                 lk_kwargs['exptime'] = 1800
