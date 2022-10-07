@@ -761,8 +761,8 @@ def plotScatter(samples, keys, fig=None, c=None, indx=None):
     return fig, ax
 
 
-@partial(jax.jit, static_argnums=(0,))
-def lnfactorial(self, n):
+@jax.jit  
+def lnfactorial(n):
     """ log(n!) approximation
 
     For large n the scipy/numpy implimentations croak when doing factorials.
