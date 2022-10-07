@@ -201,9 +201,9 @@ class asymptotic():
 
         nmax = self._get_nmax(dnu, numax, eps)
 
-        self.n_p = self._get_n_p(nmax)
+        n_p = self._get_n_p(nmax)
 
-        return (self.n_p + eps + alpha/2*(self.n_p - nmax)**2) * dnu
+        return (n_p + eps + alpha/2*(n_p - nmax)**2) * dnu
 
     @partial(jax.jit, static_argnums=(0,))
     def asymptotic_model(self, theta_asy):
