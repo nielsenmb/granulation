@@ -8,6 +8,7 @@ from IO import psd
 from utils import scalingRelations
 from asymptotic import asymptotic
 from DR import PCA
+import astropy.convolution as conv
 jax.config.update('jax_enable_x64', True)
 
 
@@ -73,7 +74,7 @@ class spectrum_fit(scalingRelations, asymptotic):
 
     def getPSD(self):
 
-        self.psd = psd(self.ID, numaxGuess=self.obs['numax'], downloadDir=self.download_dir)
+        self.psd = psd(self.ID, numaxGuess=self.obs['numax'][0], downloadDir=self.download_dir, pBinsMax=1)
 
         self.psd()
 
@@ -400,7 +401,7 @@ class spectrum_fit(scalingRelations, asymptotic):
 
     @partial(jax.jit, static_argnums=(0,))
     def _lnlike_binned(self, mod):
-        L = jnp.sum((self.psd.pbins-1)*(jnp.log(self.psd.pbins) + jnp.log(self.p)) - utils.lnfactorial(self.psd.pbins-1) - self.psd.pbins*(jnp.log(mod) + self.p/mod))
+        L = jnp.sum((self.psd.pbins-1) * (jnp.log(self.psd.pbins) + jnp.log(self.p)) - utils.lnfactorial(self.psd.pbins-1) - self.psd.pbins*(jnp.log(mod) + self.p/mod))
         return L
 
     @partial(jax.jit, static_argnums=(0,))
@@ -521,26 +522,45 @@ class spectrum_fit(scalingRelations, asymptotic):
  
     def plotModel(self, fig, ax, samples=None, outputDir=None):
 
-        def plotLines(ax, params, idx=None, alpha=1):
+        def plotLines(ax, params, idx=None, alpha=1, components=True):
 
             if idx is None:
                 idx = np.arange(len(self.f))
 
             model, _model, comps, _ = self.model(params)
 
-            ax.plot(self.f[idx], model[idx], lw =5, color = 'k', alpha=alpha)
+            ax.plot(self.f[idx], model[idx], lw =5, color = 'C3', alpha=alpha)
 
-            ax.plot(self.f[idx], comps['H1'][idx], ls = 'dashed', lw = 3, color = 'C1', alpha=alpha)
+            if components:
 
-            ax.plot(self.f[idx], comps['H2'][idx], ls = 'dashed', lw = 3, color = 'C2', alpha=alpha)
+                ax.plot(self.f[idx], comps['H1'][idx], ls = 'dashed', lw = 3, color = 'C1', alpha=alpha)
 
-            ax.plot(self.f[idx], comps['H3'][idx], ls = 'dashed', lw = 3, color = 'C3', alpha=alpha)
+                ax.plot(self.f[idx], comps['H2'][idx], ls = 'dashed', lw = 3, color = 'C2', alpha=alpha)
 
-            ax.plot(self.f[idx], comps['modes'][idx], ls = 'dashed', lw = 3, color = 'C4', alpha=alpha)
+                ax.plot(self.f[idx], comps['H3'][idx], ls = 'dashed', lw = 3, color = 'C5', alpha=alpha)
 
-            ax.axhline(comps['W'], color = 'k', ls='dashed', alpha=alpha)
+                #ax.plot(self.f[idx], comps['modes'][idx], ls = 'dashed', lw = 3, color = 'C4', alpha=alpha)
 
-        ax.plot(self.f, self.p, alpha = 0.5, color = 'C0')
+                ax.axhline(comps['W'], color = 'k', ls='dashed', alpha=alpha)
+
+        fac = max([1, 0.05 / (self.f[1] - self.f[0])])
+        kernel = conv.Gaussian1DKernel(stddev=fac)
+        smoo = conv.convolve(self.p, kernel)
+
+        ax[0].plot(self.f, self.p, 'k-', label='Data', alpha=0.2)
+        ax[0].plot(self.f, smoo, 'k-', label='Smoothed', lw=3, alpha=0.6)
+        ax[0].set_yscale('log')
+        ax[0].set_xscale('log')
+        ax[0].set_ylim(max([self.p.min()*0.9]), self.p.max()*1.1)
+        ax[0].set_xlim(self.f.min(), self.f.max())
+
+        ax[1].plot(self.f, self.p, 'k-', label='Data', alpha=0.2)
+        ax[1].plot(self.f, smoo, 'k-', label='Smoothed', lw=3, alpha=0.6)
+        ax[1].set_yscale('linear')
+        ax[1].set_xscale('linear')
+        ax[1].set_xlim(self.obs['numax'][0] - 0.8*0.66 * self.obs['numax'][0]**0.88, 
+                       self.obs['numax'][0] + 0.8*0.66 * self.obs['numax'][0]**0.88)
+        ax[1].set_ylim([0, smoo.max()*1.5])
 
         if samples is None:
             mu_pr = np.zeros(self.ndim) + 0.5
@@ -557,26 +577,22 @@ class spectrum_fit(scalingRelations, asymptotic):
             rnd = np.random.choice(np.arange(nsamples), size=20, replace=False)
 
             for idx in rnd:
-                plotLines(ax, samples[idx, :], thinIdx, alpha = 0.1)
+                plotLines(ax[0], samples[idx, :], thinIdx, alpha = 0.1)
+                plotLines(ax[1], samples[idx, :], thinIdx, alpha = 0.1, components=False)
+   
+        ax[0].set_ylabel('Power spectral density [ppm$^2/\mu$Hz]')
+        ax[0].set_xlabel('Frequency [$\mu$Hz]')
+        ax[1].set_ylabel('Power spectral density [ppm$^2/\mu$Hz]')
+        ax[1].set_xlabel('Frequency [$\mu$Hz]')
 
-        ax.set_ylim(max([self.p.min()*0.9]), self.p.max()*1.1)
-
-        ax.set_xlim(self.f.min(), self.f.max())
-
-        ax.set_yscale('log')
-
-        ax.set_xscale('log')
-
-        ax.set_ylabel('Power spectral density [ppm$^2/\mu$Hz]')
-
-        ax.set_xlabel('Frequency [$\mu$Hz]')
+        ext = f'pca{self.DR.dims_R}'
 
         if outputDir is not None:
 
             if samples is None:
-                path = os.path.join(*[outputDir, os.path.basename(outputDir) + '_prior_model.png'])
+                path = os.path.join(*[outputDir, self.ID + f'_prior_model_{ext}.png'])
             else:
-                path = os.path.join(*[outputDir, os.path.basename(outputDir) + '_samples_model.png'])
+                path = os.path.join(*[outputDir, self.ID + f'_samples_model_{ext}.png'])
 
             fig.savefig(path, dpi=300)
 
@@ -588,10 +604,10 @@ class spectrum_fit(scalingRelations, asymptotic):
             ext = 'nopca'
 
         # Store the class instance
-        #gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.gfit'])
+        gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.gfit'])
 
-        #with open(gfitpath, 'wb') as outfile:
-        #    dill.dump(self, outfile)
+        with open(gfitpath, 'wb') as outfile:
+           dill.dump(self, outfile)
 
         # Store the packed samples
         spath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_samples_{ext}'])
