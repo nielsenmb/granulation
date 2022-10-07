@@ -74,7 +74,7 @@ class spectrum_fit(scalingRelations, asymptotic):
 
     def getPSD(self):
 
-        self.psd = psd(self.ID, numaxGuess=self.obs['numax'][0], downloadDir=self.download_dir, pBinsMax=1)
+        self.psd = psd(self.ID, numaxGuess=self.obs['numax'][0], downloadDir=self.download_dir, pBinsMax=1, tBinsMax=1)
 
         self.psd()
 
@@ -529,21 +529,21 @@ class spectrum_fit(scalingRelations, asymptotic):
 
             model, _model, comps, _ = self.model(params)
 
-            ax.plot(self.f[idx], model[idx], lw =5, color = 'C3', alpha=alpha)
+            ax.plot(self.f[idx], model[idx], lw =5, color = 'C3', alpha=alpha, label='Spectrum model')
 
             if components:
 
-                ax.plot(self.f[idx], comps['H1'][idx], ls = 'dashed', lw = 3, color = 'C1', alpha=alpha)
+                ax.plot(self.f[idx], comps['H1'][idx], ls = 'dashed', lw = 3, color = 'C1', alpha=alpha, label='First Harvey profile')
 
-                ax.plot(self.f[idx], comps['H2'][idx], ls = 'dashed', lw = 3, color = 'C2', alpha=alpha)
+                ax.plot(self.f[idx], comps['H2'][idx], ls = 'dashed', lw = 3, color = 'C2', alpha=alpha, label='Second Harvey profile')
 
-                ax.plot(self.f[idx], comps['H3'][idx], ls = 'dashed', lw = 3, color = 'C5', alpha=alpha)
+                ax.plot(self.f[idx], comps['H3'][idx], ls = 'dashed', lw = 3, color = 'C5', alpha=alpha, label='Third Harvey profile')
 
                 #ax.plot(self.f[idx], comps['modes'][idx], ls = 'dashed', lw = 3, color = 'C4', alpha=alpha)
 
-                ax.axhline(comps['W'], color = 'k', ls='dashed', alpha=alpha)
+                ax.axhline(comps['W'], color = 'k', ls='dashed', alpha=alpha, label='Shot noise level')
 
-        fac = max([1, 0.05 / (self.f[1] - self.f[0])])
+        fac = int(max([1, 0.05 / (self.f[1] - self.f[0])]))
         kernel = conv.Gaussian1DKernel(stddev=fac)
         smoo = conv.convolve(self.p, kernel)
 
@@ -560,14 +560,16 @@ class spectrum_fit(scalingRelations, asymptotic):
         ax[1].set_xscale('linear')
         ax[1].set_xlim(self.obs['numax'][0] - 0.8*0.66 * self.obs['numax'][0]**0.88, 
                        self.obs['numax'][0] + 0.8*0.66 * self.obs['numax'][0]**0.88)
-        ax[1].set_ylim([0, smoo.max()*1.5])
+        idx = abs(self.f - self.obs['numax'][0]) < 0.8*0.66 * self.obs['numax'][0]**0.88
+        ax[1].set_ylim([0, smoo[idx].max()*1.5])
 
         if samples is None:
             mu_pr = np.zeros(self.ndim) + 0.5
 
             params = self.ptform(mu_pr)
 
-            plotLines(ax, params)
+            plotLines(ax[0], params)
+            plotLines(ax[1], params, components=False)
 
         else:
             nsamples = len(samples[:, 0])
