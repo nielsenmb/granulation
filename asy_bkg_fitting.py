@@ -520,16 +520,16 @@ class spectrum_fit(scalingRelations, asymptotic):
 
             utils._priorCurve(axes[i,i], self.priors[i].ppf, self.priors[i].pdf)
  
-    def plotModel(self, fig, ax, samples=None, outputDir=None):
+    def plotModel(self, fig, ax, samples=None, obs=None, outputDir=None, scale=1):
 
-        def plotLines(ax, params, idx=None, alpha=1, components=True):
+        def plotLines(ax, params, idx=None, alpha=1, components=True, scale=1):
 
             if idx is None:
                 idx = np.arange(len(self.f))
 
             model, _model, comps, _ = self.model(params)
 
-            ax.plot(self.f[idx], model[idx], lw =5, color = 'C3', alpha=alpha, label='Spectrum model')
+            ax.plot(self.f[idx], model[idx]/scale, lw =2, color = 'C3', alpha=alpha, label='Spectrum model')
 
             if components:
 
@@ -543,25 +543,29 @@ class spectrum_fit(scalingRelations, asymptotic):
 
                 ax.axhline(comps['W'], color = 'k', ls='dashed', alpha=alpha, label='Shot noise level')
 
-        fac = int(max([1, 0.05 / (self.f[1] - self.f[0])]))
+        if 'dnu' in obs.keys():
+            fac = int(max([1, 0.05 / obs['dnu']]))
+        else:
+            fac = int(max([1, 0.05 / (self.f[1] - self.f[0])]))
         kernel = conv.Gaussian1DKernel(stddev=fac)
         smoo = conv.convolve(self.p, kernel)
 
-        ax[0].plot(self.f, self.p, 'k-', label='Data', alpha=0.2)
-        ax[0].plot(self.f, smoo, 'k-', label='Smoothed', lw=3, alpha=0.6)
+        #ax[0].plot(self.f, self.p, 'k-', label='Data', alpha=0.2)
+        ax[0].plot(self.f, smoo, 'k-', label='Smoothed', lw=2, alpha=0.2)
         ax[0].set_yscale('log')
         ax[0].set_xscale('log')
-        ax[0].set_ylim(max([self.p.min()*0.9]), self.p.max()*1.1)
+        ax[0].set_ylim(smoo.min(), smoo.max()*1.1)
         ax[0].set_xlim(self.f.min(), self.f.max())
 
-        ax[1].plot(self.f, self.p, 'k-', label='Data', alpha=0.2)
-        ax[1].plot(self.f, smoo, 'k-', label='Smoothed', lw=3, alpha=0.6)
+        #ax[1].plot(self.f, self.p, 'k-', label='Data', alpha=0.2)
+        ax[1].plot(self.f, smoo/scale, 'k-', label='Smoothed', lw=2, alpha=0.2)
         ax[1].set_yscale('linear')
         ax[1].set_xscale('linear')
         ax[1].set_xlim(self.obs['numax'][0] - 0.8*0.66 * self.obs['numax'][0]**0.88, 
                        self.obs['numax'][0] + 0.8*0.66 * self.obs['numax'][0]**0.88)
         idx = abs(self.f - self.obs['numax'][0]) < 0.8*0.66 * self.obs['numax'][0]**0.88
-        ax[1].set_ylim([0, smoo[idx].max()*1.5])
+        ax[1].set_ylim([0, 1/scale*smoo[idx].max()*1.])
+        ax[1].ticklabel_format(axis='y', style='sci', scilimits=(0,0))
 
         if samples is None:
             mu_pr = np.zeros(self.ndim) + 0.5
@@ -576,21 +580,31 @@ class spectrum_fit(scalingRelations, asymptotic):
 
             thinIdx = utils.gen_log_space(len(self.f), min([len(self.f), 5000]))
 
-            rnd = np.random.choice(np.arange(nsamples), size=20, replace=False)
+            rnd = np.random.choice(np.arange(nsamples), size=100, replace=False)
 
             for idx in rnd:
                 plotLines(ax[0], samples[idx, :], thinIdx, alpha = 0.1)
-                plotLines(ax[1], samples[idx, :], thinIdx, alpha = 0.1, components=False)
+                plotLines(ax[1], samples[idx, :], thinIdx, alpha = 0.1, components=False, scale=scale)
    
-        ax[0].set_ylabel('Power spectral density [ppm$^2/\mu$Hz]')
-        ax[0].set_xlabel('Frequency [$\mu$Hz]')
-        ax[1].set_ylabel('Power spectral density [ppm$^2/\mu$Hz]')
-        ax[1].set_xlabel('Frequency [$\mu$Hz]')
+        ax[0].set_ylabel('PSD [ppm$^2/\mu$Hz]')
+        
+        ax[1].set_ylabel('PSD [ppm$^2/\mu$Hz]')
+
+        if self.DR.dims_R == 16:
+            ax[0].set_xlabel('Frequency [$\mu$Hz]')
+            ax[1].set_xlabel('Frequency [$\mu$Hz]')
+        else:
+            ax[0].set_xticks([])
+            ax[1].set_xticks([])
+
+        ax[0].text(x=210, y=3e4, s=f'{self.DR.dims_R} PCs', ha='right', bbox=dict(edgecolor='k', facecolor='w', alpha=0.5))
+        ax[1].text(x=45.1, y=8.225e4, s=f'{self.DR.dims_R} PCs', ha='right', bbox=dict(edgecolor='k',facecolor='w', alpha=0.5))
 
         ext = f'pca{self.DR.dims_R}'
 
+        fig.tight_layout()
         if outputDir is not None:
-
+            
             if samples is None:
                 path = os.path.join(*[outputDir, self.ID + f'_prior_model_{ext}.png'])
             else:
