@@ -620,7 +620,7 @@ class spectrum_fit(scalingRelations, asymptotic):
             ext = 'nopca'
 
         # Store the class instance
-        gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.gfit'])
+        gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.sfit'])
 
         with open(gfitpath, 'wb') as outfile:
            dill.dump(self, outfile)
