@@ -3,28 +3,23 @@
 
 import os, sys
 import pandas as pd
-from granulation_fitting import granulation_fit 
+from asy_bkg_fitting import spectrum_fit 
 from matplotlib.pyplot import *
 rcParams['font.size'] = 18
-
-def wfunc(self, n=1):
-     
-    ppf, pdf = self.getQuantileFuncs(self.data_F[:, :1])
-
-    w = 1/pdf[0](self.data_F[:, 0])**n
-       
-    return w
+ 
 
 download_dir = '/rds/projects/b/ballwh-tess-yield/data'
 
 workDir = '/rds/projects/n/nielsemb-plato-peakbagging/granulation/'
+ 
+prior_data_fname = os.path.join(*[workDir, 'bkgfit_output_nopca.csv']) 
 
-prior_data = pd.read_csv(os.path.join(*[workDir, 'prior_data.csv']))
+prior_data = pd.read_csv(prior_data_fname)
  
 figM, axM = subplots(figsize=(16,9))
-fig3, ax3 = subplots(3, 3, figsize=(9,9))
-fig4, ax4 = subplots(4, 4, figsize=(12,12))
-figA, axA = subplots(13, 13, figsize=(32,32))
+# fig3, ax3 = subplots(3, 3, figsize=(9,9))
+# fig4, ax4 = subplots(4, 4, figsize=(12,12))
+# figA, axA = subplots(13, 13, figsize=(32,32))
 
 cornerN = 5000
 
@@ -41,8 +36,8 @@ ID = prior_data.loc[i, 'ID']
 
 print(f'{ID}')
 
-if pcadim > 0:
-   print(f'Running with {pcadim} pca dimensions')
+# if pcadim > 0:
+#    print(f'Running with {pcadim} pca dimensions')
 
 
 # Establish output dir
@@ -58,34 +53,37 @@ if pcadim > 0:
 else:
     ext = '_nopca'
 
-    
+# fnames = {'full_sample': os.path.join(*[outputDir, ID+f'_full_sample{ext}.npz'])}
 
-fnames = {'full_sample': os.path.join(*[outputDir, ID+f'_full_sample{ext}.npz'])}
-
-if os.path.exists(fnames['full_sample']):
-    if clear:
-        os.remove(fnames['full_sample'])
-        print('Removing %s' % (os.path.basename(fnames['full_sample'])))
-    else:
-        print(f'{ID} already done, ending')
-        sys.exit()
+# if os.path.exists(fnames['full_sample']):
+#     if clear:
+#         os.remove(fnames['full_sample'])
+#         print('Removing %s' % (os.path.basename(fnames['full_sample'])))
+#     else:
+#         print(f'{ID} already done, ending')
+#         sys.exit()
 
 
 # Start setup
-_numax = prior_data.loc[i, 'numax']
-numax = (10**_numax, 0.1*10**_numax)
+_numax = prior_data.loc[i, 'numax'] # tgt numax
+_teff = prior_data.loc[i, 'teff'] # tgt numax
+_bp_rp = prior_data.loc[i, 'bp_rp'] # tgt numax
 
-gfit = granulation_fit(ID, numax, download_dir, pcadim=pcadim, weights=wfunc, weight_args={'n':2}, N=200)
+obs = {'numax': [10**_numax, 0.01*10**_numax], 
+       'teff': [10**_teff, 100],
+       'bp_rp': [_bp_rp, 0.1]} 
 
-gfit.plotModel(figM, axM, outputDir=outputDir);
+sfit = spectrum_fit(ID, obs, download_dir, pcadim=pcadim, N=200, fname=prior_data_fname)
+
+sfit.plotModel(figM, axM, outputDir=outputDir);
 axM.clear()
 
 print('Running the sampler')
-sampler, samples = gfit.runDynesty()
+dynSampler, dynSamples = sfit.runDynesty(progress=False)
 
-gfit.storeResults(outputDir)
+sfit.storeResults(outputDir)
 
-gfit.plotModel(figM, axM, samples, outputDir=outputDir)
+sfit.plotModel(figM, axM, dynSamples, outputDir=outputDir)
 axM.clear()
 
 print('Done')
