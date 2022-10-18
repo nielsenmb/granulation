@@ -16,7 +16,7 @@ prior_data_fname = os.path.join(*[workDir, 'bkgfit_output_nopca.csv'])
 
 prior_data = pd.read_csv(prior_data_fname)
  
-figM, axM = subplots(figsize=(16,9))
+figM, axM = subplots(1, 2, figsize=(16,9))
 # fig3, ax3 = subplots(3, 3, figsize=(9,9))
 # fig4, ax4 = subplots(4, 4, figsize=(12,12))
 # figA, axA = subplots(13, 13, figsize=(32,32))
@@ -68,14 +68,17 @@ else:
 _numax = prior_data.loc[i, 'numax'] # tgt numax
 _teff = prior_data.loc[i, 'teff'] # tgt numax
 _bp_rp = prior_data.loc[i, 'bp_rp'] # tgt numax
+_dnu = prior_data.loc[i, 'dnu'] # tgt numax
+
 
 obs = {'numax': [10**_numax, 0.01*10**_numax], 
        'teff': [10**_teff, 100],
-       'bp_rp': [_bp_rp, 0.1]} 
+       'bp_rp': [_bp_rp, 0.1],
+       'dnu': [10**_dnu, 0.01*10**_dnu]} 
 
 sfit = spectrum_fit(ID, obs, download_dir, pcadim=pcadim, N=200, fname=prior_data_fname)
 
-sfit.plotModel(figM, axM, outputDir=outputDir);
+sfit.plotModel(figM, axM, obs=obs, outputDir=outputDir);
 axM.clear()
 
 print('Running the sampler')
@@ -83,7 +86,7 @@ dynSampler, dynSamples = sfit.runDynesty(progress=False)
 
 sfit.storeResults(outputDir)
 
-sfit.plotModel(figM, axM, dynSamples, outputDir=outputDir)
+sfit.plotModel(figM, axM, dynSamples, obs=obs, outputDir=outputDir)
 axM.clear()
 
 print('Done')
