@@ -3,6 +3,8 @@ scripts/*
 
 slurm*
 
+*.stats
+*.out
 
 # exception to the rule
 !results/.gitkeep 

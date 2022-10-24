@@ -8,7 +8,6 @@ from utils import scalingRelations
 import os, pickle, re
 import lightkurve as lk
 from datetime import datetime
-from numba import jit
  
 class psd(scalingRelations):
     """ Asteroseismology wrapper for Astropy Lomb-Scargle

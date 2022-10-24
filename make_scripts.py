@@ -5,9 +5,9 @@ import glob
 import os
 
 
-batches = 4
+batches = 13
 
-pcadim = 0
+pcadim = 9
 
 
 clear = 'False'

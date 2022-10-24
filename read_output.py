@@ -44,7 +44,7 @@ for i in prior_data.index[start: stop]:
         print(i, f'{ID} samples not found.')
         continue
     
-    full_samples = np.log10(full_samples)
+    #full_samples = np.log10(full_samples)
     
     # numax, height, width, hsig1, hnu1, exp1, hsig2, hnu2, exp2, hsig3, hnu3, exp3, w
     percentiles= np.array([0.159, 0.5, 0.841]) * 100
