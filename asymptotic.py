@@ -263,38 +263,38 @@ class asymptotic():
         return mod  
 
 
-    # No jax on this one
-    def __get_enns(self, nmax):
-        """Compute radial order numbers.
+    # # No jax on this one
+    # def __get_enns(self, nmax):
+    #     """Compute radial order numbers.
 
-        This is not jaxxed.
+    #     This is not jaxxed.
 
-        Get the enns that will be included in the asymptotic relation fit.
-        These are all integer.
+    #     Get the enns that will be included in the asymptotic relation fit.
+    #     These are all integer.
 
-        Parameters
-        ----------
-        nmax : float
-            Frequency of maximum power of the p-mode envelope
-        norders : int
-            Total number of radial orders to consider
+    #     Parameters
+    #     ----------
+    #     nmax : float
+    #         Frequency of maximum power of the p-mode envelope
+    #     norders : int
+    #         Total number of radial orders to consider
 
-        Returns
-        -------
-        enns : ndarray
-                Numpy array of norders radial orders (integers) around nu_max
-                (nmax).
+    #     Returns
+    #     -------
+    #     enns : ndarray
+    #             Numpy array of norders radial orders (integers) around nu_max
+    #             (nmax).
 
-        """
+    #     """
 
-        below = jnp.floor(nmax - jnp.floor(self.norders/2)).astype(int)
+    #     below = jnp.floor(nmax - jnp.floor(self.norders/2)).astype(int)
 
-        above = jnp.floor(nmax + jnp.ceil(self.norders/2)).astype(int)
+    #     above = jnp.floor(nmax + jnp.ceil(self.norders/2)).astype(int)
 
-        # Handling of single input (during fitting), or array input when evaluating
-        # the fit result
-        if type(below) != jnp.ndarray:
-            return jnp.arange(below, above)
-        else:
-            out = jnp.concatenate([jnp.arange(x, y) for x, y in zip(below, above)])
-            return out.reshape(-1, self.norders)
+    #     # Handling of single input (during fitting), or array input when evaluating
+    #     # the fit result
+    #     if type(below) != jnp.ndarray:
+    #         return jnp.arange(below, above)
+    #     else:
+    #         out = jnp.concatenate([jnp.arange(x, y) for x, y in zip(below, above)])
+    #         return out.reshape(-1, self.norders)
