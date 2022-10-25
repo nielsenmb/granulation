@@ -348,42 +348,59 @@ class spectrum_fit(scalingRelations, asymptotic):
             dnu, d02, alpha, modeWidth, teff = 10**theta_invT[0:5] 
             bp_rp, eps, = theta_invT[5:7] 
 
-            numax, envHeight, envWidth  = 10**theta_invT[7:10] 
+            numax, envHeight, envWidth = 10**theta_invT[7:10] 
 
             hsig1, hnu1 = 10**theta_invT[10:12] 
-            exp1 = theta_invT[12] 
+            hexp1 = theta_invT[12] 
     
             hsig2, hnu2 = 10**theta_invT[13:15]
-            exp2 = theta_invT[15]
+            hexp2 = theta_invT[15]
 
-            hsig3, hnu3, exp3, white = theta[self.DR.dims_R:]
+            hsig3, hnu3, hexp3, white = theta[self.DR.dims_R:]
 
             hsig3 = 10**hsig3
 
             w = 10**white
 
         else:
-            numax, height, dwidth, hsig1, dhnu1, exp1, hsig2, dhnu2, exp2, hsig3, hnu3, exp3, white = theta
+            dnu, d02, alpha, modeWidth, teff = 10**theta[0:5]
+            bp_rp, eps = theta[5:7] 
 
-            height = 10**height
+            numax, envHeight, envWidth = 10**theta[7:10]
+            
+            hsig1, hnu1 = 10**theta[10:12] 
+            hexp1 = theta[12]
 
-            # Start with Harvey laws
-            hsig1 = 10**hsig1
-            hnu1 = self.nuHarveyEnv(numax) * dhnu1
-            
-            hsig2 = 10**hsig2
-            hnu2 = self.nuHarveyGran(numax) * dhnu2
-        
-            # Add envelope
-            width = dwidth * self.envWidth(numax) * self.wfac
-            
+            hsig2, hnu2 = 10**theta[13:15]
+            hexp2 = theta[15]
+
+            hsig3, hnu3, hexp3, white = theta[16:]
+
             hsig3 = 10**hsig3
 
             w = 10**white
 
+            # numax, height, dwidth, hsig1, dhnu1, exp1, hsig2, dhnu2, exp2, hsig3, hnu3, exp3, white = theta
+
+            # height = 10**height
+
+            # # Start with Harvey laws
+            # hsig1 = 10**hsig1
+            # hnu1 = self.nuHarveyEnv(numax) * dhnu1
+            
+            # hsig2 = 10**hsig2
+            # hnu2 = self.nuHarveyGran(numax) * dhnu2
+        
+            # # Add envelope
+            # width = dwidth * self.envWidth(numax) * self.wfac
+            
+            # hsig3 = 10**hsig3
+
+            # w = 10**white
+
         theta_asy = [numax, dnu, eps, d02, alpha, envHeight, envWidth, modeWidth]
 
-        theta_bkg = [hsig1, hnu1, exp1, hsig2, hnu2, exp2, hsig3, hnu3, exp3, w]
+        theta_bkg = [hsig1, hnu1, hexp1, hsig2, hnu2, hexp2, hsig3, hnu3, hexp3, w]
 
         theta_extra = {'teff': teff, 
                        'bp_rp': bp_rp,
@@ -544,7 +561,7 @@ class spectrum_fit(scalingRelations, asymptotic):
                 ax.axhline(comps['W'], color = 'k', ls='dashed', alpha=alpha, label='Shot noise level')
 
         if 'dnu' in obs.keys():
-            fac = int(max([1, 0.05 / obs['dnu']]))
+            fac = int(max([1, 0.05 / obs['dnu'][0]]))
         else:
             fac = int(max([1, 0.05 / (self.f[1] - self.f[0])]))
         kernel = conv.Gaussian1DKernel(stddev=fac)
@@ -597,8 +614,8 @@ class spectrum_fit(scalingRelations, asymptotic):
             ax[0].set_xticks([])
             ax[1].set_xticks([])
 
-        ax[0].text(x=210, y=3e4, s=f'{self.DR.dims_R} PCs', ha='right', bbox=dict(edgecolor='k', facecolor='w', alpha=0.5))
-        ax[1].text(x=45.1, y=8.225e4, s=f'{self.DR.dims_R} PCs', ha='right', bbox=dict(edgecolor='k',facecolor='w', alpha=0.5))
+        #ax[0].text(x=210, y=3e4, s=f'{self.DR.dims_R} PCs', ha='right', bbox=dict(edgecolor='k', facecolor='w', alpha=0.5))
+        #ax[1].text(x=45.1, y=8.225e4, s=f'{self.DR.dims_R} PCs', ha='right', bbox=dict(edgecolor='k',facecolor='w', alpha=0.5))
 
         ext = f'pca{self.DR.dims_R}'
 
