@@ -39,8 +39,7 @@ for i in idxs:
            'teff': [10**_teff, 100],
            'bp_rp': [_bp_rp, 0.1]} 
 
-    
-    sfit = spectrum_fit(ID, obs, download_dir, pcadim=ndim, N=200, fname=prior_data_fname)
+    sfit = spectrum_fit(ID, obs, download_dir, pcadim=pcadim, N=200, fname=prior_data_fname)
         
     dynSampler, dynSamples = sfit.runDynesty(progress=True)
 
