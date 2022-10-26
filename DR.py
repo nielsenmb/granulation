@@ -152,7 +152,7 @@ class PCA():
          return out[self.pcalabels]
 
 
-    def findNearest(self, pdata, N, precision='low'):
+    def findNearest(self, pdata, N, precision='high'):
 
         if precision == 'low':
             keys = ['numax']
