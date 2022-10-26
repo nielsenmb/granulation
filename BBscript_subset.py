@@ -34,6 +34,7 @@ for i in idxs:
     _numax = prior_data.loc[i, 'numax']
     _teff = prior_data.loc[i, 'teff']
     _bp_rp = prior_data.loc[i, 'bp_rp'] 
+    
 
     obs = {'numax': [10**_numax, 0.01*10**_numax], 
            'teff': [10**_teff, 100],
