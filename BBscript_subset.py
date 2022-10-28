@@ -45,6 +45,7 @@ for i in idxs:
     fname = os.path.join(*[outputDir, ID + f'_{ext}.sfit'])
 
     if os.path.exists(fname):
+        print(f'{fname} already done')
         continue
 
     sfit = spectrum_fit(ID, obs, download_dir, pcadim=pcadim, N=200, fname=prior_data_fname)
