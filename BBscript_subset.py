@@ -15,25 +15,26 @@ prior_data = pd.read_csv(prior_data_fname)
 
 pcadim = int(sys.argv[1])
 
-test_numaxs = np.linspace(min(prior_data['numax']), 
-                          max(prior_data['numax']), 50)
+#test_numaxs = np.linspace(min(prior_data['numax']),  max(prior_data['numax']), 50)
 
-idxs = np.array([np.argmin(abs(prior_data['numax'].values - nu)) for nu in test_numaxs])
+#idxs = np.array([np.argmin(abs(prior_data['numax'].values - nu)) for nu in test_numaxs])
+
+tgts = pd.read_csv('test_tgts_try.csv')
 
 ext = f'_pca{pcadim}'
 
-for i in idxs:
-    ID = prior_data.loc[i, 'ID']
-
+for i in tgts.index:
+    ID = tgts.loc[i, 'ID']
+    print(ID)
     # Establish output dir
     outputDir = os.path.join(*[workDir, 'results', ID])
 
     if not os.path.exists(outputDir):
         os.makedirs(outputDir)
  
-    _numax = prior_data.loc[i, 'numax']
-    _teff = prior_data.loc[i, 'teff']
-    _bp_rp = prior_data.loc[i, 'bp_rp'] 
+    _numax = tgts.loc[i, 'numax']
+    _teff = tgts.loc[i, 'teff']
+    _bp_rp = tgts.loc[i, 'bp_rp'] 
 
 
     obs = {'numax': [10**_numax, 0.01*10**_numax], 
