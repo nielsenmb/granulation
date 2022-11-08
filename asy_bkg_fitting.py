@@ -619,7 +619,7 @@ class spectrum_fit(scalingRelations, asymptotic):
 
         ext = f'pca{self.DR.dims_R}'
 
-        fig.tight_layout()
+        #fig.tight_layout()
         if outputDir is not None:
             
             if samples is None:
