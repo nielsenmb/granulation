@@ -238,17 +238,17 @@ class spectrum_fit(scalingRelations, asymptotic):
 
         return har
 
-    @partial(jax.jit, static_argnums=(0,))
-    def gaussian(self, numax, width, height):
-        """ Gaussian to describe oscillations
+    # @partial(jax.jit, static_argnums=(0,))
+    # def gaussian(self, numax, width, height):
+    #     """ Gaussian to describe oscillations
 
-        Note the input height is log10.
+    #     Note the input height is log10.
 
-        """
+    #     """
 
-        m = height * jnp.exp(-(self._f - numax)**2 / (2.0 * width**2))
+    #     m = height * jnp.exp(-(self._f - numax)**2 / (2.0 * width**2))
 
-        return m
+    #     return m
 
     @partial(jax.jit, static_argnums=(0,))
     def model(self, params):
