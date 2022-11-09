@@ -243,13 +243,16 @@ class psd(scalingRelations):
 
             if numaxGuess > 1/(2*1800)*1e6:
                 lk_kwargs['exptime'] = 60
+                self.lc_type = 'Kepler 60s'
             else:
                 lk_kwargs['exptime'] = 1800
+                self.lc_type = 'Kepler 1800s'
 
         if 'TIC' in self.ID:
             lk_kwargs['author'] = 'SPOC'
             lk_kwargs['mission'] = 'TESS'
             lk_kwargs['exptime'] = 120
+            self.lc_type = 'TESS 120s'
 
         wlen = int(1.5e6/lk_kwargs['exptime'])-1
         if wlen % 2 == 0:

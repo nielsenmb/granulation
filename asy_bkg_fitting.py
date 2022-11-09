@@ -1,4 +1,3 @@
-from curses.has_key import has_key
 import jax.numpy as jnp
 from functools import partial
 import jax, dynesty, corner, os, dill, time, emcee, utils
@@ -24,7 +23,9 @@ class spectrum_fit(scalingRelations, asymptotic):
         self.obs = obs
 
         self.logobs = {key: utils.to_log10(*obs[key]) for key in obs.keys()}
-                
+
+        self.freq_limit = [1, 5000]       
+
         self.getPSD()
         
         self.norders = 7
@@ -78,9 +79,30 @@ class spectrum_fit(scalingRelations, asymptotic):
 
         self.psd()
 
-        self.f, self.p = self.psd.freq[self.psd.freq > 1], self.psd.powerdensity[self.psd.freq > 1]
-        
-        self._f = jnp.append(self.f, self.f + self.f.max())
+        self.lc_type = self.psd.lc_type
+
+        if self.lc_type in ['Kepler 1800s', 'TESS 120s']:
+
+            self.psd_slice = (self.freq_limit[0] < self.psd.freq)
+
+            self.f = self.psd.freq[self.psd_slice] 
+
+            self.p = self.psd.powerdensity[self.psd_slice]
+            
+            self._f = jnp.append(self.f, self.f + self.f.max())
+
+        elif self.lc_type in ['Kepler 60s']:
+
+            self.psd_slice = (self.freq_limit[0] < self.psd.freq) & (self.psd.freq < self.freq_limit[1])
+
+            self.f = self.psd.freq[self.psd_slice]
+
+            self._f = self.psd.freq[self.psd_slice]
+
+            self.p = self.psd.powerdensity[self.psd_slice]
+
+        else:
+            raise ValueError('lc_type must be either Kepler LC, Kepler SC or TESS SC.')
 
         self.t, self.d = self.psd.time, self.psd.flux
 
@@ -110,10 +132,10 @@ class spectrum_fit(scalingRelations, asymptotic):
         self.priors = []
 
         # Add the 3rd Harvey law and white noise
-        widx = self.f > self.Nyquist - 10
+        widx = self.f > min([self.f[-1], self.Nyquist]) - 10
 
         pw = np.nanmean(self.p[widx])
-
+ 
         if self.with_pca:
             # Add pca parameters to the list of prior objects
             for i in range(self.DR.dims_R):
@@ -178,7 +200,7 @@ class spectrum_fit(scalingRelations, asymptotic):
         idx = abs(self.f - nuH) < 10
 
         mu = jnp.array([1, self.p[idx].mean() - pw]).max()
-
+         
         self.priors.append(utils.normal(mu=jnp.log10(mu*nuH), sigma=2)) # hsig
 
         self.priors.append(utils.normal(mu=1, sigma=0.15)) # dhnu
@@ -283,7 +305,12 @@ class spectrum_fit(scalingRelations, asymptotic):
         
         _model = (1 + modes) * bkg * self.eta 
         
-        model = _model[:len(self.f)] + W + _model[len(self.f):][::-1] 
+        if self.lc_type in ['Kepler 1800s', 'TESS 120s']:
+            model = _model[:len(self.f)] + W + _model[len(self.f):][::-1] 
+        elif self.lc_type in ['Kepler 60s']:
+            model = _model + W
+        else:
+            raise ValueError('lc_type attribute must be either LC or SC.')
 
         comps['modes'] = modes
 
@@ -637,9 +664,9 @@ class spectrum_fit(scalingRelations, asymptotic):
             ext = 'nopca'
 
         # Store the class instance
-        gfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.sfit'])
+        sfitpath = os.path.join(*[outputDir, os.path.basename(outputDir) + f'_{ext}.sfit'])
 
-        with open(gfitpath, 'wb') as outfile:
+        with open(sfitpath, 'wb') as outfile:
            dill.dump(self, outfile)
 
         # Store the packed samples
